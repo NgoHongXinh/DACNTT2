@@ -20,7 +20,10 @@ config_system = {
     "MONGO_DB_HOST": dotenv_values.get("MONGO_DB_HOST", ""),
     "MONGO_DB_PORT": dotenv_values.get("MONGO_DB_PORT", ""),
     "MONGO_DB_AUTH_MECHANISM": dotenv_values.get("MONGO_DB_AUTH_MECHANISM", ""),
-    "MONGO_DB_NAME": dotenv_values.get("MONGO_DB_NAME", "")
+    "MONGO_DB_NAME": dotenv_values.get("MONGO_DB_NAME", ""),
+    "JWT_SECRET_KEY": dotenv_values.get("JWT_SECRET_KEY", ""),
+    "ALGORITHM": dotenv_values.get("ALGORITHM", ""),
+    "EXPIRES_TIME": int(dotenv_values.get("EXPIRES_TIME", "300"))
 }
 
 
