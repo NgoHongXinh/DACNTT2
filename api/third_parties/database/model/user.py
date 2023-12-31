@@ -5,9 +5,9 @@ from api.third_parties.database.model.base import BaseModel
 
 class User(BaseModel):
 
-    def __init__(self, user_code=None, fullname=None, picture=None, background_picture=None, picture_id=None,
-                 given_name=None, family_name=None, user_name=None, biography=None, class_name=None, faculty=None,
-                 friend_ids=[], birthday=None, phone=None, gender=None):
+    def __init__(self, user_code="", fullname="", picture="", background_picture="", picture_id="",
+                 given_name="", family_name="", user_name="", biography="", class_name="", faculty="",
+                 friend_ids=[], birthday="", phone="", gender=""):
         super().__init__()
         self.user_code = user_code,
         self.fullname = fullname,
@@ -28,6 +28,6 @@ class User(BaseModel):
     def to_json(self):
         data = self.__dict__
         for key, value in list(data.items()):
-            if value is None:
+            if value is "":
                 del data[key]
         return data

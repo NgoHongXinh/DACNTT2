@@ -13,7 +13,7 @@ from pydantic.generics import GenericModel
 
 class ResponseStatus(BaseModel):
     code: str = Field("", example='')
-    type: str = Field("", example='')
+    type: str = Field("success", example='')
     message: str = Field("", example='')
 
 
