@@ -21,3 +21,24 @@ async def get_user_by_code(user_code):
     db = await MongoDBService().get_db()
     return await db['account'].find_one({"user_code": user_code})
 
+
+async def regex_user_name_email(name_or_email: str):
+    db = await MongoDBService().get_db()
+    print("vaif")
+    cursor = db['account'].find({
+        '$or': [
+            {
+                'fullname': {
+                    '$regex': name_or_email,
+                    '$options': 'i'
+                }
+            },
+            {'username': {
+                '$regex': name_or_email,
+                '$options': 'i'
+            }
+            }
+        ]
+    })
+    data = await cursor.to_list(None)
+    return data
