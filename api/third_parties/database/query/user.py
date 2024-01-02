@@ -21,3 +21,5 @@ async def get_user_by_code(user_code):
     db = await MongoDBService().get_db()
     return await db['user'].find_one({"user_code": user_code})
 
+
+
