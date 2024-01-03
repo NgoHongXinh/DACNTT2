@@ -1,3 +1,5 @@
+from pymongo import ReturnDocument
+
 from api.library.function import verify_password, get_password_hash
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 
@@ -24,7 +26,6 @@ async def get_user_by_code(user_code):
 
 async def regex_user_name_email(name_or_email: str):
     db = await MongoDBService().get_db()
-    print("vaif")
     cursor = db['account'].find({
         '$or': [
             {
@@ -42,3 +43,13 @@ async def regex_user_name_email(name_or_email: str):
     })
     data = await cursor.to_list(None)
     return data
+
+
+async def update_user(user_id, data_update):
+    db = await MongoDBService().get_db()
+    update_result = await db['account'].find_one_and_update(
+        {"_id": is_valid_object_id((user_id))},
+        {"$set": data_update},
+        return_document=ReturnDocument.AFTER,
+    )
+    return update_result
