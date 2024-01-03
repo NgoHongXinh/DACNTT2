@@ -22,7 +22,7 @@ class User(BaseModel):
         self.faculty = faculty,
         self.friend_ids = friend_ids,
         self.birthday = birthday,
-        # self.phone = ,
+        self.phone = phone,
         self.gender = gender
 
     def to_json(self):

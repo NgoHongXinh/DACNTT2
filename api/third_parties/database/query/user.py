@@ -4,12 +4,12 @@ from api.third_parties.database.mongodb import MongoDBService, is_valid_object_i
 
 async def get_user_id(user_id):
     db = await MongoDBService().get_db()
-    return await db['account'].find_one({"_id": is_valid_object_id(user_id)})
+    return await db['user'].find_one({"_id": is_valid_object_id(user_id)})
 
 
 async def check_user(username: str, password: str):
     db = await MongoDBService().get_db()
-    user = await db['account'].find_one({"username": username})
+    user = await db['user'].find_one({"username": username})
     if user:
         check_pass = await verify_password(password, user['password'])
         if check_pass:
@@ -19,26 +19,7 @@ async def check_user(username: str, password: str):
 
 async def get_user_by_code(user_code):
     db = await MongoDBService().get_db()
-    return await db['account'].find_one({"user_code": user_code})
+    return await db['user'].find_one({"user_code": user_code})
 
 
-async def regex_user_name_email(name_or_email: str):
-    db = await MongoDBService().get_db()
-    print("vaif")
-    cursor = db['account'].find({
-        '$or': [
-            {
-                'fullname': {
-                    '$regex': name_or_email,
-                    '$options': 'i'
-                }
-            },
-            {'username': {
-                '$regex': name_or_email,
-                '$options': 'i'
-            }
-            }
-        ]
-    })
-    data = await cursor.to_list(None)
-    return data
+

@@ -1,0 +1,1 @@
+from pydantic import BaseModel,  Field# from api.base.schema import CommonModel# from api.third_parties.database.model.base import BaseModelclass ResponseUserOnline(BaseModel):    user_online_code: str = Field("", example='')    user_id: str = Field("", example='')    socket_id: str = Field("", example='')    status: bool = Field("", example=False)
