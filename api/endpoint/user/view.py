@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Form, UploadFile
+from typing import List
+
+from fastapi import APIRouter, Depends, Form, UploadFile, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 
 from api.base.authorization import get_current_user
@@ -13,6 +15,36 @@ from api.third_parties.database.query.user import get_user_by_code, regex_user_n
 from settings.init_project import open_api_standard_responses, http_exception
 
 router = APIRouter()
+
+
+@router.get(
+    path="/user/find-user",
+    name="find_user",
+    description="find user",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[List[ResponseUserProfile]],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+
+)
+async def find_friend(name_or_email: str = Query(default=""), user: dict = Depends(get_current_user)):
+
+    data = None
+    if name_or_email:
+        data = await regex_user_name_email(name_or_email)
+
+    response = {
+        'data': data,
+        "response_status": {
+            "code": CODE_SUCCESS,
+            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        }
+    }
+    return SuccessResponse[List[ResponseUserProfile]](**response)
+
+
 @router.get(
     path="/user/{user_code}",
     name="123",
