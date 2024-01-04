@@ -22,8 +22,8 @@ class ResponseCreateUpdatePost(BaseModel):
     image: List[str] = Field([], example=[''])
     liked_by: List[str] = Field([], example=[''])
     comment_post: List[str] = Field([], example=[''])
-    video: str = Field("", example='')
-    video_ids: str = Field("", example='')
+    video: List[str] = Field([], example='')
+    video_ids: List[str] = Field([], example='')
 
 
 class CreateUpdatePost(BaseModel):

@@ -22,42 +22,40 @@ async def get_post_by_id(post_id):
     return post
 
 
-async def create_post(user_code, content, images=[], video=None):
+async def create_post(data):
     db = await MongoDBService().get_db()
-    post_code = str(uuid.uuid4())
+    # post_code = str(uuid.uuid4())
     new_post = {
-        'created_by': user_code,
-        'content': content,
-        'images': [],
-        'image_ids': [],
-        'video': "",
-        'video_ids': "",
-        'post_code': post_code
+        'created_by': data.created_by,
+        'content': data.content,
+        'images': data.images,
+        'image_ids': data.image_ids,
+        'videos': data.videos,
+        'video_ids': data.video_ids,
+        'post_code': data.post_code
     }
     print(new_post)
     result = await db['post'].insert_one(new_post)
     return result.inserted_id
 
 
-async def update_post(user_code, post_code, content, images=[], video=None):
+async def update_post(post_code, data_update):
     db = await MongoDBService().get_db()
-    update = {}
-    if content:
-        update['content'] = content
-    if images:
-        update['images'] = []
-    if video:
-        update['video'] = ""
-
-    print(update)
-    if update is not None:
-        result = await db['post'].update_one(
-            {"post_code": post_code, "created_by": user_code},
-            {"$set": update}
-        )
-        return result.upserted_id
-    else:
-        return None
+    # update = {}
+    # if content:
+    #     update['content'] = content
+    # if images:
+    #     update['images'] = []
+    # if video:
+    #     update['video'] = ""
+    #
+    # print(update)
+    # if update is not None:
+    result = await db['post'].update_one(
+        {"post_code": post_code},
+        {"$set": data_update.to_json()}
+    )
+    return result.upserted_id
 
 
 async def delete_post(post_code):
