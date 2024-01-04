@@ -12,7 +12,7 @@ class ResponseUser(BaseModel):
     picture_id: str = Field("", example='')
     given_name: str = Field("", example='')
     family_name: str = Field("", example='')
-    user_name: str = Field("", example='')
+    username: str = Field("", example='')
     biography: str = Field("", example='')
     class_name: str = Field("", example='')
     faculty: str = Field("", example='')
@@ -30,7 +30,7 @@ class ResponseUserProfile(BaseModel):
     picture_id: str = Field("", example='')
     given_name: str = Field("", example='')
     family_name: str = Field("", example='')
-    user_name: str = Field("", example='')
+    username: str = Field("", example='')
     biography: str = Field("", example='')
     class_name: str = Field("", example='')
     faculty: str = Field("", example='')
@@ -49,3 +49,5 @@ class ResponseUserProfile(BaseModel):
                                 <br> not_friend: không phải bản, ko có lời mời
                                 '''
                                 )
+
+

@@ -23,7 +23,10 @@ config_system = {
     "MONGO_DB_NAME": dotenv_values.get("MONGO_DB_NAME", ""),
     "JWT_SECRET_KEY": dotenv_values.get("JWT_SECRET_KEY", ""),
     "ALGORITHM": dotenv_values.get("ALGORITHM", ""),
-    "EXPIRES_TIME": int(dotenv_values.get("EXPIRES_TIME", "300"))
+    "EXPIRES_TIME": int(dotenv_values.get("EXPIRES_TIME", "300")),
+    "CLOUD_NAME": dotenv_values.get("CLOUD_NAME"),
+    "CLOUD_API_KEY": dotenv_values.get("CLOUD_API_KEY"),
+    "API_SECRECT": dotenv_values.get("API_SECRECT")
 }
 
 

@@ -6,7 +6,7 @@ from api.third_parties.database.model.base import BaseModel
 class User(BaseModel):
 
     def __init__(self, user_code="", fullname="", picture="", background_picture="", picture_id="",
-                 given_name="", family_name="", user_name="", biography="", class_name="", faculty="",
+                 given_name="", family_name="", username="", biography="", class_name="", faculty="",
                  friend_ids=[], birthday="", phone="", gender=""):
         super().__init__()
         self.user_code = user_code,
@@ -16,7 +16,7 @@ class User(BaseModel):
         self.picture_id = picture_id,
         self.given_name = given_name,
         self.family_name = family_name,
-        self.user_name = user_name,
+        self.username = username,
         self.biography = biography,
         self.class_name = class_name,
         self.faculty = faculty,
