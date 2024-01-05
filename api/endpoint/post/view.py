@@ -100,10 +100,10 @@ async def create_post(
                               code=CODE_ERROR_INPUT,
                               message='Maximum image number is 4')
 
-    image_ids =[]
-    video_ids =[]
-    videos =[]
-    images =[]
+    image_ids = []
+    video_ids = []
+    videos = []
+    images = []
 
     if images_upload:
         for image in images_upload:
