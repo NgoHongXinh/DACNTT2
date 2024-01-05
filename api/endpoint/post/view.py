@@ -126,10 +126,11 @@ async def create_post(
         created_by=user['user_code']
     )
 
-    new_post = await post_query.create_post(post_data)
-    post_id = await get_post_by_id(new_post)
+    new_post_id = await post_query.create_post(post_data)
+    new_post = await get_post_by_id(new_post_id)
+    new_post['created_by'] = user
     response = {
-        "data": post_id,
+        "data": new_post,
         "response_status": {
             "code": CODE_SUCCESS,
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -163,7 +164,7 @@ async def delete_post(post_code: str):
 
     return None
 
-@router.put(
+@router.post(
     path="/post/{post_code}",
     name="update_post",
     description="update post",
@@ -201,32 +202,28 @@ async def update_post(
             info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
             image_ids.append(info_image_upload['public_id'])
             images.append(info_image_upload['url'])
+        post_need_update['images'] = images
+        post_need_update['image_ids'] = image_ids
         for image_id in list_image_need_delete_incloud:
             print(image_id)
             print(await delete_image(image_id))
-    else:
-        image_ids = post_need_update['image_ids']
-        images = post_need_update['images']
 
     if video_upload:
         data_video_byte = await video_upload.read()
         info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
         video_ids.append(info_video_upload['public_id'])
         videos.append(info_video_upload['url'])
+        post_need_update['videos'] = videos
+        post_need_update['video_ids'] = video_ids
 
-    post_data = Post(
-        content=content,
-        image_ids=image_ids,
-        images=images,
-        video_ids=video_ids,
-        videos=videos,
-        created_by=user['user_code']
-    )
-    post_update = await post_query.update_post(post_code, post_data)
-
-    post_id = await get_post_by_id(post_update)
+    if content:
+        post_need_update['content'] = content
+    print(post_need_update)
+    post_update = await post_query.update_post(post_code, post_need_update)
+    print(post_update)
+    post_update['created_by'] = user
     response = {
-        "data": post_id,
+        "data": post_update,
         "response_status": {
             "code": CODE_SUCCESS,
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],

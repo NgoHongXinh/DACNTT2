@@ -6,7 +6,7 @@ from api.third_parties.database.model.base import BaseModel
 
 class Post(BaseModel):
 
-    def __init__(self, post_code=str(uuid.uuid4()), created_by=None, content=None, images=[],
+    def __init__(self, post_code=None, created_by=None, content=None, images=[],
                  image_ids=[], videos=None, video_ids=None, liked_by=[],
                  comment_post=[], root_post=None):
         super().__init__()

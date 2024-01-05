@@ -1,5 +1,7 @@
 import uuid
 
+from pymongo import ReturnDocument
+
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 
 
@@ -24,7 +26,7 @@ async def get_post_by_id(post_id):
 
 async def create_post(data):
     db = await MongoDBService().get_db()
-    # post_code = str(uuid.uuid4())
+    post_code = str(uuid.uuid4())
     new_post = {
         'created_by': data.created_by,
         'content': data.content,
@@ -32,7 +34,7 @@ async def create_post(data):
         'image_ids': data.image_ids,
         'videos': data.videos,
         'video_ids': data.video_ids,
-        'post_code': data.post_code
+        'post_code': post_code
     }
     print(new_post)
     result = await db['post'].insert_one(new_post)
@@ -41,21 +43,13 @@ async def create_post(data):
 
 async def update_post(post_code, data_update):
     db = await MongoDBService().get_db()
-    # update = {}
-    # if content:
-    #     update['content'] = content
-    # if images:
-    #     update['images'] = []
-    # if video:
-    #     update['video'] = ""
-    #
-    # print(update)
-    # if update is not None:
-    result = await db['post'].update_one(
+    result = await db['post'].find_one_and_update(
         {"post_code": post_code},
-        {"$set": data_update.to_json()}
+        {"$set": data_update},
+        return_document=ReturnDocument.AFTER
     )
-    return result.upserted_id
+    print(result)
+    return result
 
 
 async def delete_post(post_code):

@@ -2,6 +2,8 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
+from api.endpoint.user.schema import ResponseUser
+
 
 class ResponsePost(BaseModel):
     post_code: str = Field("", example='')
@@ -17,12 +19,12 @@ class ResponsePost(BaseModel):
 
 class ResponseCreateUpdatePost(BaseModel):
     post_code: str = Field("", example='')
-    created_by: str = Field("", example='')
+    created_by: ResponseUser = Field(None)
     content: str = Field("", example='')
-    image: List[str] = Field([], example=[''])
+    images: List[str] = Field([], example=[''])
     liked_by: List[str] = Field([], example=[''])
     comment_post: List[str] = Field([], example=[''])
-    video: List[str] = Field([], example='')
+    videos: List[str] = Field([], example='')
     video_ids: List[str] = Field([], example='')
 
 
