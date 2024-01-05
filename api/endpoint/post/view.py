@@ -1,3 +1,4 @@
+import uuid
 from typing import List
 
 from fastapi import APIRouter, UploadFile, File, Depends, Form
@@ -118,6 +119,7 @@ async def create_post(
         videos.append(info_video_upload['url'])
 
     post_data = Post(
+        post_code=str(uuid.uuid4()),
         content=content,
         image_ids=image_ids,
         images=images,

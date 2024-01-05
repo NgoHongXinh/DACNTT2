@@ -2,6 +2,7 @@ import uuid
 
 from pymongo import ReturnDocument
 
+from api.third_parties.database.model.post import Post
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 
 
@@ -24,20 +25,9 @@ async def get_post_by_id(post_id):
     return post
 
 
-async def create_post(data):
+async def create_post(data: Post):
     db = await MongoDBService().get_db()
-    post_code = str(uuid.uuid4())
-    new_post = {
-        'created_by': data.created_by,
-        'content': data.content,
-        'images': data.images,
-        'image_ids': data.image_ids,
-        'videos': data.videos,
-        'video_ids': data.video_ids,
-        'post_code': post_code
-    }
-    print(new_post)
-    result = await db['post'].insert_one(new_post)
+    result = await db['post'].insert_one(data.to_json())
     return result.inserted_id
 
 

@@ -5,11 +5,11 @@ from api.third_parties.database.model.base import BaseModel
 
 class FriendRequest(BaseModel):
 
-    def __init__(self, friend_request_code=None, user_receive_id=None, user_request=None, status=None):
+    def __init__(self, friend_request_code=None, user_code_receive=None, user_code_request=None, status=False):
         super().__init__()
         self.friend_request_code = friend_request_code,
-        self.user_receive_id = user_receive_id,
-        self.user_request = user_request,
+        self.user_code_receive = user_code_receive,
+        self.user_code_request = user_code_request,
         self.status = status
 
     def to_json(self):
