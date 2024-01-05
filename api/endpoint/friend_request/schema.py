@@ -5,8 +5,4 @@ from pydantic import BaseModel,  Field
 
 
 class ResponseFriendRequest(BaseModel):
-    friendRequest_code: str = Field("", example='')
-    user_receive_id: str = Field("", example='')
-    # userRequest: ObjectId = Field("", example=ObjectId(''))
-    user_request: str = Field("", example='')
-    status: bool = Field("", example=False)
+    message: str = Field("")

@@ -1,16 +1,19 @@
+import uuid
 from typing import List
 
 from fastapi import APIRouter, UploadFile, File, Depends, Form
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED
 
 from api.base.authorization import get_current_user
-from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND
+from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost
+from api.third_parties.cloud.query import upload_image_cloud, delete_image
+from api.third_parties.database.model.post import Post
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
 from api.third_parties.database.query import comment as comment_query
-from api.third_parties.database.query.post import get_post_by_id
+from api.third_parties.database.query.post import get_post_by_id, get_post_by_post_code
 from settings.init_project import open_api_standard_responses, http_exception
 
 router = APIRouter()
@@ -86,44 +89,55 @@ async def get_post(post_code):
 )
 async def create_post(
         content: str = Form(""),
-        image: List[UploadFile] = UploadFile(None),
-        video: UploadFile = File(None),
+        images_upload: List[UploadFile] = File(None),
+        video_upload: UploadFile = File(None),
         user: dict = Depends(get_current_user)
 ):
-    # print(await image[0].read())
-    print(image, content)
-
-    if not content and not image and not video:
+    if not content and not images_upload and not video_upload:
         return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
-    # image_urls = []
-    # if image:
-    #     for image_file in image:
-    #         # upload_result = await get_upload(image_file.file) # upload image to cloudinary
-    #         # image_urls.append(upload_result['url'])
-    # else:
-    #     return None
-    #
-    # video_url = None
-    # if video:
-    #     # upload_result = await get_upload(video.file)
-    #     # video_url = upload_result['url']
-    #     # video_url = get_link_youtube(video_url)
-    #     # get link youtube
-    # else:
-    #     return None
-    # return None
+    if images_upload and len(images_upload) > 4:
+        return http_exception(status_code=HTTP_400_BAD_REQUEST,
+                              code=CODE_ERROR_INPUT,
+                              message='Maximum image number is 4')
 
-    new_post = await post_query.create_post(user['user_code'], content, image, video)
-    post_id = await get_post_by_id(new_post)
+    image_ids = []
+    video_ids = []
+    videos = []
+    images = []
+
+    if images_upload:
+        for image in images_upload:
+            data_image_byte = await image.read()
+            info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
+            image_ids.append(info_image_upload['public_id'])
+            images.append(info_image_upload['url'])
+
+    if video_upload:
+        data_video_byte = await video_upload.read()
+        info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
+        video_ids.append(info_video_upload['public_id'])
+        videos.append(info_video_upload['url'])
+
+    post_data = Post(
+        post_code=str(uuid.uuid4()),
+        content=content,
+        image_ids=image_ids,
+        images=images,
+        video_ids=video_ids,
+        videos=videos,
+        created_by=user['user_code']
+    )
+
+    new_post_id = await post_query.create_post(post_data)
+    new_post = await get_post_by_id(new_post_id)
+    new_post['created_by'] = user
     response = {
-        "data": post_id,
+        "data": new_post,
         "response_status": {
             "code": CODE_SUCCESS,
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
         }
     }
-    print(response)
-
     return SuccessResponse[ResponseCreateUpdatePost](**response)
 
 @router.delete(
@@ -152,7 +166,7 @@ async def delete_post(post_code: str):
 
     return None
 
-@router.put(
+@router.post(
     path="/post/{post_code}",
     name="update_post",
     description="update post",
@@ -166,34 +180,52 @@ async def delete_post(post_code: str):
 async def update_post(
         post_code: str,
         content: str = Form(""),
-        image: List[UploadFile] = UploadFile(None),
-        video: UploadFile = File(None),
+        images_upload: List[UploadFile] = File(None),
+        video_upload: UploadFile = File(None),
         user: dict = Depends(get_current_user)
 
 ):
-    if not content and not image and not video:
+    if not content and not images_upload and not video_upload:
         return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
-    # image_urls = []
-    # if image:
-    #     for image_file in image:
-    #         upload_result = await get_upload(image_file.file) # upload image to cloudinary
-    #         image_urls.append(upload_result['url'])
-    # else:
-    #     return None
-    #
-    # video_url = None
-    # if video:
-    #     upload_result = await get_upload(video.file)
-    #     video_url = upload_result['url']
-    #     video_url = get_link_youtube(video_url)
-    #     # get link youtube
-    # else:
-    #     return None
-    print(image, content)
-    post_update = await post_query.update_post(user['user_code'], post_code, content, image, video)
-    post_id = await get_post_by_id(post_update)
+    image_ids =[]
+    video_ids =[]
+    videos =[]
+    images =[]
+
+
+    post_need_update = await get_post_by_post_code(post_code)
+    if not post_need_update:
+        return http_exception(HTTP_400_BAD_REQUEST, CODE_ERROR_POST_CODE_NOT_FOUND)
+    list_image_need_delete_incloud = post_need_update['image_ids']
+    list_video_need_delete_incloud = post_need_update['video_ids']
+    if images_upload:
+        for image in images_upload:
+            data_image_byte = await image.read()
+            info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
+            image_ids.append(info_image_upload['public_id'])
+            images.append(info_image_upload['url'])
+        post_need_update['images'] = images
+        post_need_update['image_ids'] = image_ids
+        for image_id in list_image_need_delete_incloud:
+            print(image_id)
+            print(await delete_image(image_id))
+
+    if video_upload:
+        data_video_byte = await video_upload.read()
+        info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
+        video_ids.append(info_video_upload['public_id'])
+        videos.append(info_video_upload['url'])
+        post_need_update['videos'] = videos
+        post_need_update['video_ids'] = video_ids
+
+    if content:
+        post_need_update['content'] = content
+    print(post_need_update)
+    post_update = await post_query.update_post(post_code, post_need_update)
+    print(post_update)
+    post_update['created_by'] = user
     response = {
-        "data": post_id,
+        "data": post_update,
         "response_status": {
             "code": CODE_SUCCESS,
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
