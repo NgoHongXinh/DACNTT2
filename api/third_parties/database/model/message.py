@@ -7,9 +7,9 @@ class Message(BaseModel):
 
     def __init__(self, message_code=None, conversation_id=None, sender_id=None, text=None):
         super().__init__()
-        self.message_code = message_code,
-        self.conversation_id = conversation_id,
-        self.sender_id = sender_id,
+        self.message_code = message_code
+        self.conversation_id = conversation_id
+        self.sender_id = sender_id
         self.text = text
 
     def to_json(self):

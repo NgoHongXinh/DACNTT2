@@ -9,15 +9,15 @@ class Post(BaseModel):
                  image_id=[], video=None, video_ids=None, liked_by=[],
                  comment_post=[], root_post=None):
         super().__init__()
-        self.post_code = post_code,
-        self.created_by = created_by,
-        self.content = content,
-        self.image = image,
-        self.image_id = image_id,
-        self.video = video,
-        self.video_ids = video_ids,
-        self.liked_by = liked_by,
-        self.comment_post = comment_post,
+        self.post_code = post_code
+        self.created_by = created_by
+        self.content = content
+        self.image = image
+        self.image_id = image_id
+        self.video = video
+        self.video_ids = video_ids
+        self.liked_by = liked_by
+        self.comment_post = comment_post
         self.root_post = root_post
 
     def to_json(self):

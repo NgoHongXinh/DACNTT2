@@ -7,9 +7,9 @@ class FriendRequest(BaseModel):
 
     def __init__(self, friend_request_code=None, user_receive_id=None, user_request=None, status=None):
         super().__init__()
-        self.friend_request_code = friend_request_code,
-        self.user_receive_id = user_receive_id,
-        self.user_request = user_request,
+        self.friend_request_code = friend_request_code
+        self.user_receive_id = user_receive_id
+        self.user_request = user_request
         self.status = status
 
     def to_json(self):
