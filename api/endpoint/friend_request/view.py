@@ -1,5 +1,5 @@
 import uuid
-
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -16,6 +16,8 @@ from api.third_parties.database.query.notification import create_noti
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
 
+
+logger = logging.getLogger("friend_request.view.py")
 router = APIRouter()
 @router.post(
     path="/friend_request/{user_code_want_request}",
@@ -82,12 +84,14 @@ async def get_friend_request(user_code_want_request: str, user: dict = Depends(g
                 "response_status": {
                     "code": CODE_SUCCESS,
                     "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-        }})
+                }
+            })
         else:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_WHEN_UPDATE_CREATE_FRIEND_REQUEST
             raise HTTPException(status_code)
     except:
+        logger.error(message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
