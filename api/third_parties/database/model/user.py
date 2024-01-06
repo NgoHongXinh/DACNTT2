@@ -7,7 +7,7 @@ class User(BaseModel):
 
     def __init__(self, user_code="", fullname="", picture="", background_picture="", picture_id="",
                  given_name="", family_name="", username="", biography="", class_name="", faculty="",
-                 friend_ids=[], birthday="", phone="", gender=""):
+                 friends_code=[], birthday="", phone="", gender=""):
         super().__init__()
         self.user_code = user_code,
         self.fullname = fullname,
@@ -20,7 +20,7 @@ class User(BaseModel):
         self.biography = biography,
         self.class_name = class_name,
         self.faculty = faculty,
-        self.friend_ids = friend_ids,
+        self.friends_code = friends_code,
         self.birthday = birthday,
         self.phone = phone,
         self.gender = gender
