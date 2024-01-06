@@ -13,15 +13,9 @@ class Post(BaseModel):
         self.post_code = post_code
         self.created_by = created_by
         self.content = content
-<<<<<<< HEAD
-        self.image = image
-        self.image_id = image_id
-        self.video = video
-=======
         self.images = images
         self.image_ids = image_ids
         self.videos = videos
->>>>>>> origin
         self.video_ids = video_ids
         self.liked_by = liked_by
         self.comment_post = comment_post
