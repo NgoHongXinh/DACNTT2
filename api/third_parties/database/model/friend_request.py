@@ -10,7 +10,7 @@ class FriendRequest(BaseModel):
         self.friend_request_code = friend_request_code
         self.user_code_receive = user_code_receive
         self.user_code_request = user_code_request
-        self.status = status
+        self.status = status  # False: đang trong thời gian chờ kết ban, True đã chấp nhận lời mời kết bạn
 
     def to_json(self):
         data = self.__dict__

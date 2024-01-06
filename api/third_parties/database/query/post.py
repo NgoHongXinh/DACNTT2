@@ -38,7 +38,7 @@ async def update_post(post_code, data_update):
         {"$set": data_update},
         return_document=ReturnDocument.AFTER
     )
-    print(result)
+
     return result
 
 
