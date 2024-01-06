@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get(
     path=f"/posts",
     name="get_all_post",
-    description="get all post of user ",
+    description="get all post of user",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
@@ -235,3 +235,27 @@ async def update_post(
 
 
 
+@router.get(
+    path="/post/user/{user_code}",
+    name="get_all_post",
+    description="get all post of user",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[List[ResponsePost]],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def get_all_posts(user: dict = Depends(get_current_user)):
+    print(user)
+    posts = await post_query.get_all_post_by_user_code(user['user_code'])
+    print(posts)
+    response = {
+        "data": posts,
+        "response_status": {
+            "code": CODE_SUCCESS,
+            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        }
+    }
+    print(response)
+    return SuccessResponse[List[ResponsePost]](**response)
