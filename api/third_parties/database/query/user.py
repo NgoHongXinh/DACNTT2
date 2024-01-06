@@ -53,3 +53,23 @@ async def update_user(user_id, data_update):
         return_document=ReturnDocument.AFTER,
     )
     return update_result
+
+
+async def update_user_friend(current_user_code, friend_user_code):
+    db = await MongoDBService().get_db()
+    update_result = await db['user'].find_one_and_update(
+        {"user_code": current_user_code},
+        {"$push": {"friends_code": friend_user_code}},
+        return_document=ReturnDocument.AFTER,
+    )
+    return update_result
+
+
+async def remove_user_friend(current_user_code, friend_user_code):
+    db = await MongoDBService().get_db()
+    update_result = await db['user'].find_one_and_update(
+        {"user_code": current_user_code},
+        {"$pull": {"friends_code": friend_user_code}},
+        return_document=ReturnDocument.AFTER,
+    )
+    return update_result

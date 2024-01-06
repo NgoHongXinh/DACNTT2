@@ -1,5 +1,8 @@
 import uuid
 
+from pymongo import ReturnDocument
+
+from api.third_parties.database.model.post import Post
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 
 
@@ -22,42 +25,21 @@ async def get_post_by_id(post_id):
     return post
 
 
-async def create_post(user_code, content, images=[], video=None):
+async def create_post(data: Post):
     db = await MongoDBService().get_db()
-    post_code = str(uuid.uuid4())
-    new_post = {
-        'created_by': user_code,
-        'content': content,
-        'images': [],
-        'image_ids': [],
-        'video': "",
-        'video_ids': "",
-        'post_code': post_code
-    }
-    print(new_post)
-    result = await db['post'].insert_one(new_post)
+    result = await db['post'].insert_one(data.to_json())
     return result.inserted_id
 
 
-async def update_post(user_code, post_code, content, images=[], video=None):
+async def update_post(post_code, data_update):
     db = await MongoDBService().get_db()
-    update = {}
-    if content:
-        update['content'] = content
-    if images:
-        update['images'] = []
-    if video:
-        update['video'] = ""
+    result = await db['post'].find_one_and_update(
+        {"post_code": post_code},
+        {"$set": data_update},
+        return_document=ReturnDocument.AFTER
+    )
 
-    print(update)
-    if update is not None:
-        result = await db['post'].update_one(
-            {"post_code": post_code, "created_by": user_code},
-            {"$set": update}
-        )
-        return result.upserted_id
-    else:
-        return None
+    return result
 
 
 async def delete_post(post_code):
