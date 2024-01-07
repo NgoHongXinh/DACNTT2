@@ -31,4 +31,8 @@ CODE_ERROR_FRIEND_REQUEST_NOT_FOUND: "Friend request not found"
     }
 }
 
-PAGING_LIMIT = 20
+PAGING_LIMIT = 10
+
+FRIEND = 'friend'
+NOT_FRIEND = 'not_friend'
+PENDDING = 'pendding'

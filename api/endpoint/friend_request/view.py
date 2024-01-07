@@ -7,17 +7,19 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNA
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.friend_request.schema import ResponseFriendRequest, ResponseCreateFriendRequest
+from api.endpoint.friend_request.schema import ResponseFriendRequest, ResponseCreateFriendRequest, ResponseFriendOfUser
 from api.library.constant import CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
     CODE_ERROR_WHEN_UPDATE_CREATE, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, \
     CODE_ERROR_WHEN_UPDATE_CREATE_FRIEND_REQUEST, CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, \
     CODE_ERROR_WHEN_UPDATE_CREATE_USER, CODE_ERROR_FRIEND_REQUEST_NOT_FOUND
+from api.library.function import check_friend_or_not_in_profile
 from api.third_parties.database.model.friend_request import FriendRequest
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.query.friend_request import get_friend, create_fr, update_friend_request, \
     get_all_friend_request, delete_friend_request
 from api.third_parties.database.query.notification import create_noti
-from api.third_parties.database.query.user import get_user_by_code, update_user_friend, remove_user_friend
+from api.third_parties.database.query.user import get_user_by_code, update_user_friend, remove_user_friend, \
+    get_list_user_in_list
 from settings.init_project import open_api_standard_responses, http_exception
 
 
@@ -197,7 +199,6 @@ async def accept_friend(
         # cập nhật thành công hết thì trả lại danh sách lời mời kết bạn hiện tại
         list_friend_request_cursor = await get_all_friend_request()
         list_friend_request_cursor = await list_friend_request_cursor.to_list(None)
-        print(list_friend_request_cursor)
         response = {
                 "data": list_friend_request_cursor,
                 "response_status": {
@@ -242,6 +243,62 @@ async def deny_friend(friend_request_code: str, user: dict = Depends(get_current
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         })
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+        )
+
+
+@router.get(
+    path="/get-all-friend/user/{user_code}",
+    name="deny_new_friend",
+    description="deny friend request",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[List[ResponseFriendOfUser]],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+
+)
+async def get_all_friend_of_user(
+        user_code: str,
+        last_friend_id: str = Query(default="", description='id cuối cùng của user trong danh sách bạn bè '),
+        user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+    try:
+        user_info = await get_user_by_code(user_code)
+        if not user_info:
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            status_code = HTTP_400_BAD_REQUEST
+            raise HTTPException(status_code)
+        get_friend_of_user = await get_list_user_in_list(user_info['friends_code'], last_friend_id)
+        get_friend_of_user = await get_friend_of_user.to_list(None)
+        # th vào trang bạn bè của người khác
+        # kiểm tra xem danh sách bạn bè của người đó có ai là bạn với mình hay đã gửi lời mời ...
+        if user_code != user['user_code']:
+            for index, friend in enumerate(get_friend_of_user):
+                # nếu nguowfi đang onle là bạn bè của user_code đang cần tìm thì bỏ qua vì đã kiểm tra ở bên user rồi
+                if user['user_code'] == friend['user_code']:
+                    get_friend_of_user.pop(index)
+                    break
+            for index, friend in enumerate(get_friend_of_user):
+                get_friend_of_user[index]['friend_status'] = await check_friend_or_not_in_profile(
+                    current_user=user['user_code'],
+                    user_code_check=friend['user_code'],
+                    list_friend_code=user['friends_code'])
+        response = {
+            "data": get_friend_of_user,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[List[ResponseFriendOfUser]](**response)
+
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
         return http_exception(

@@ -34,7 +34,7 @@ class ResponseUserProfile(BaseModel):
     biography: str = Field("", example='')
     class_name: str = Field("", example='')
     faculty: str = Field("", example='')
-    friends_code: str = Field("", example='')
+    # friends_code: List[] = Field("", example='')
     birthday: str = Field("", example='')
     phone: str = Field("", example='')
     gender: str = Field("", example='')

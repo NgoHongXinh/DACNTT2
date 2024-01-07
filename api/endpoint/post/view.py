@@ -31,9 +31,7 @@ router = APIRouter()
     )
 )
 async def get_posts(user: dict = Depends(get_current_user)):
-    print(user)
     posts = await post_query.get_all_post_by_user_code(user['user_code'])
-    print(posts)
     for post in posts:
         post['is_liked'] = False
         if user['user_code'] in post['liked_by']:  # kiểm tra chủ bài dăng đã like hay chưa
@@ -46,7 +44,6 @@ async def get_posts(user: dict = Depends(get_current_user)):
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
         }
     }
-    print(response)
     return SuccessResponse[List[ResponsePost]](**response)
 
 
@@ -208,7 +205,7 @@ async def update_post(
         post_need_update['image_ids'] = image_ids
         for image_id in list_image_need_delete_incloud:
             print(image_id)
-            print(await delete_image(image_id))
+            await delete_image(image_id)
 
     if video_upload:
         data_video_byte = await video_upload.read()
@@ -220,9 +217,9 @@ async def update_post(
 
     if content:
         post_need_update['content'] = content
-    print(post_need_update)
+
     post_update = await post_query.update_post(post_code, post_need_update)
-    print(post_update)
+
     post_update['created_by'] = user
     response = {
         "data": post_update,
