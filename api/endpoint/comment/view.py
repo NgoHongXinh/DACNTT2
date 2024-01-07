@@ -24,7 +24,7 @@ async def get_comment(comment_id: str):
     if not comment_id:
         return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_id not allow empty')
     cursor = await get_comment_id(comment_id)
-    print(cursor)
+
     response = {
         "data": cursor,
         "response_status": {
