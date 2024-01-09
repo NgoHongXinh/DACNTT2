@@ -42,6 +42,24 @@ async def update_post(post_code, data_update):
     return result
 
 
+async def update_like_post(post_code, user_code_like, add_like=True):
+    db = await MongoDBService().get_db()
+    if add_like:
+        result = await db['post'].find_one_and_update(
+            {"post_code": post_code},
+            {"$push": {'liked_by': user_code_like}},
+            return_document=ReturnDocument.AFTER
+        )
+    else:
+        result = await db['post'].find_one_and_update(
+            {"post_code": post_code},
+            {"$pull": {'liked_by': user_code_like}},
+            return_document=ReturnDocument.AFTER
+        )
+
+    return result
+
+
 async def delete_post(post_code):
     db = await MongoDBService().get_db()
     result = await db['post'].delete_one({"post_code": post_code})
