@@ -42,7 +42,34 @@ async def update_post(post_code, data_update):
     return result
 
 
+async def update_like_post(post_code, user_code_like, add_like=True):
+    db = await MongoDBService().get_db()
+    if add_like:
+        print("vapf nef")
+        result = await db['post'].find_one_and_update(
+            {"post_code": post_code},
+            {"$push": {'liked_by': user_code_like}},
+            return_document=ReturnDocument.AFTER
+        )
+        print(result)
+    else:
+        result = await db['post'].find_one_and_update(
+            {"post_code": post_code},
+            {"$pull": {'liked_by': user_code_like}},
+            return_document=ReturnDocument.AFTER
+        )
+
+    return result
+
+
 async def delete_post(post_code):
     db = await MongoDBService().get_db()
     result = await db['post'].delete_one({"post_code": post_code})
     return result.deleted_count
+
+
+async def get_post_of_user_by_code(user_code, post_code):
+
+    db = await MongoDBService().get_db()
+    result = await db['post'].find_one({"root_post": post_code, "created_by": user_code})
+    return result
