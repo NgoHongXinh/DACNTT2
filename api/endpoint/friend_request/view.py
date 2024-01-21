@@ -73,7 +73,7 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
     )
 
 )
-async def get_friend_request(user_code_want_request: str, user: dict = Depends(get_current_user)):
+async def create_friend_request(user_code_want_request: str, user: dict = Depends(get_current_user)):
     code = message = status_code = ''
     try:
         if not user_code_want_request:
@@ -197,7 +197,7 @@ async def accept_friend(
             code = CODE_ERROR_WHEN_UPDATE_CREATE_USER
             raise HTTPException(status_code)
         # cập nhật thành công hết thì trả lại danh sách lời mời kết bạn hiện tại
-        list_friend_request_cursor = await get_all_friend_request()
+        list_friend_request_cursor = await get_all_friend_request(user['user_code'])
         list_friend_request_cursor = await list_friend_request_cursor.to_list(None)
         response = {
                 "data": list_friend_request_cursor,
