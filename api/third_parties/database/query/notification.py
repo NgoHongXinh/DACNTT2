@@ -1,6 +1,14 @@
+from api.third_parties.database.query.paging import paging
+
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
-from api.third_parties.database.query.paging import paging
+
+
+
+async def create_noti(noti: Notification):
+    db = await MongoDBService().get_db()
+    result = await db['notification'].insert_one(noti.to_json())
+    return result.inserted_id
 
 
 async def delete_notification(notification_code, user_code):
@@ -37,7 +45,3 @@ async def update_notification(notification_code, user_code):
     return result
 
 
-async def create_noti(noti: Notification):
-    db = await MongoDBService().get_db()
-    result = await db['notification'].insert_one(noti.to_json())
-    return result.inserted_id

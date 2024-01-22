@@ -100,10 +100,8 @@ async def create_comment(
         )
         new_comment_id = await comment_query.create_comment(comment_data)
         new_comment = await comment_query.get_comment_by_id(new_comment_id)
-        user_of_comment = await user_query.get_user_by_code(new_comment[0]['user_code'])
-        for comment in new_comment:
-            comment['created_by'] = user_of_comment
-        # new_comment['created_by'] = user
+
+        new_comment['created_by'] = user
 
         await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
 

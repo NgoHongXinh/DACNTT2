@@ -179,10 +179,7 @@ async def create_post(
 
         new_post_id = await post_query.create_post(post_data)
         new_post = await get_post_by_id(new_post_id)
-        user_of_post = await user_query.get_user_by_code(new_post[0]['user_code'])
-        for post in new_post:
-            post['created_by'] = user_of_post
-        # new_post['created_by'] = user
+        new_post['created_by'] = user
 
         response = {
             "data": new_post,
