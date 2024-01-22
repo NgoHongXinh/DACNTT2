@@ -39,5 +39,4 @@ async def paging(
     #         },
     #         show_value
     #     ).sort("_id", sort).limit(PAGING_LIMIT)
-
     return cursor

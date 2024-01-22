@@ -7,9 +7,9 @@ class UserOnline(BaseModel):
 
     def __init__(self, user_online_code=None, user_id=None, socket_id=None, status=None):
         super().__init__()
-        self.user_online_code = user_online_code,
-        self.user_id = user_id,
-        self.socket_id = socket_id,
+        self.user_online_code = user_online_code
+        self.user_id = user_id
+        self.socket_id = socket_id
         self.status = status
 
     def to_json(self):

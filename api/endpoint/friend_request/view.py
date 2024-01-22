@@ -20,7 +20,6 @@ from api.third_parties.database.query.notification import create_noti
 from api.third_parties.database.query.user import get_user_by_code, update_user_friend, remove_user_friend
 from settings.init_project import open_api_standard_responses, http_exception
 
-
 logger = logging.getLogger("friend_request.view.py")
 router = APIRouter()
 
@@ -54,8 +53,8 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
     except:
         logger.error(exc_info=True)
         return http_exception(
-            status_code= HTTP_500_INTERNAL_SERVER_ERROR,
-            code= CODE_ERROR_SERVER,
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
         )
 
 
@@ -120,7 +119,7 @@ async def get_friend_request(user_code_want_request: str, user: dict = Depends(g
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
             return SuccessResponse[ResponseCreateFriendRequest](**{
-                "data": {"message":"Send request success"},
+                "data": {"message": "Send request success"},
                 "response_status": {
                     "code": CODE_SUCCESS,
                     "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -199,12 +198,12 @@ async def accept_friend(
         list_friend_request_cursor = await list_friend_request_cursor.to_list(None)
         print(list_friend_request_cursor)
         response = {
-                "data": list_friend_request_cursor,
-                "response_status": {
-                    "code": CODE_SUCCESS,
-                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-                }
+            "data": list_friend_request_cursor,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
+        }
         return SuccessResponse[List[ResponseFriendRequest]](**response)
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
