@@ -49,7 +49,7 @@ async def regex_user_name_email(name_or_email: str):
 async def update_user(user_id, data_update):
     db = await MongoDBService().get_db()
     update_result = await db['user'].find_one_and_update(
-        {"_id": is_valid_object_id((user_id))},
+        {"_id": is_valid_object_id(user_id)},
         {"$set": data_update},
         return_document=ReturnDocument.AFTER,
     )
@@ -85,3 +85,4 @@ async def get_list_user_in_list(list_user_code: list, last_user_id: str = ""):
         db=db,
         sort=1)
     return list_friend_request_cursor
+

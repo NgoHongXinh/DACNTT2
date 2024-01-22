@@ -30,7 +30,7 @@ async def update_friend_request(user_code_in_queue_request, user_code, current_s
     return result
 
 
-async def get_all_friend_request(user_code: str, last_friend_request_id = "" ):
+async def get_all_friend_request(user_code: str, last_friend_request_id=""):
     db = await MongoDBService().get_db()
     list_friend_request_cursor = await paging(
         query_param_for_paging=last_friend_request_id,
