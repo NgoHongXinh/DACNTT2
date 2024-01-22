@@ -38,4 +38,8 @@ TYPE_MESSAGE_RESPONSE = {
     }
 }
 
-PAGING_LIMIT = 20
+PAGING_LIMIT = 10
+
+FRIEND = 'friend'
+NOT_FRIEND = 'not_friend'
+PENDDING = 'pendding'

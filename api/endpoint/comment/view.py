@@ -33,6 +33,7 @@ router = APIRouter()
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
+
 async def get_all_comment(post_code: str):
     try:
         if not post_code:
@@ -120,9 +121,6 @@ async def create_comment(
             # await notification_query.create_notification(notification)
 
             # # Gửi socket notification (nếu online)
-            # online_user = await online_user_query.get_online_user(post['created_by'])
-            # if online_user:
-            #     await notify(online_user['socket_id'], notification.content)
 
         response = {
             "data": new_comment,

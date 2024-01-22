@@ -1,25 +1,34 @@
+import logging
 import uuid
 import logging
 
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Depends, Form
+
+from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
+
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.authorization import get_current_user
-from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
-    CODE_ERROR_SERVER
+from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
+
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost
+from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost
 from api.third_parties.cloud.query import upload_image_cloud, delete_image
+from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.model.post import Post
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
 from api.third_parties.database.query import comment as comment_query
-from api.third_parties.database.query.post import get_post_by_id, get_post_by_post_code
+from api.third_parties.database.query.notification import create_noti
+from api.third_parties.database.query.post import get_post_by_id, get_post_by_post_code, update_like_post, \
+    get_post_of_user_by_code
+from api.third_parties.database.query.user import get_list_user_in_list
 from settings.init_project import open_api_standard_responses, http_exception
 
 router = APIRouter()
 logger = logging.getLogger("post.view.py")
+
 
 
 # @router.get(
@@ -51,6 +60,34 @@ logger = logging.getLogger("post.view.py")
 #     }
 #     print(response)
 #     return SuccessResponse[List[ResponsePost]](**response)
+
+@router.get(
+    path=f"/posts",
+    name="get_all_post",
+    description="get all post of user ",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[List[ResponsePost]],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def get_posts(user: dict = Depends(get_current_user)):
+    posts = await post_query.get_all_post_by_user_code(user['user_code'])
+    for post in posts:
+        post['is_liked'] = False
+        if user['user_code'] in post['liked_by']:  # kiểm tra chủ bài dăng đã like hay chưa
+            post['is_liked'] = True
+
+    response = {
+        "data": posts,
+        "response_status": {
+            "code": CODE_SUCCESS,
+            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        }
+    }
+    return SuccessResponse[List[ResponsePost]](**response)
+
 
 
 @router.get(
@@ -103,6 +140,7 @@ async def create_post(
         video_upload: UploadFile = File(None),
         user: dict = Depends(get_current_user)
 ):
+
     try:
         if not content and not images_upload and not video_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
@@ -145,6 +183,7 @@ async def create_post(
         for post in new_post:
             post['created_by'] = user_of_post
         # new_post['created_by'] = user
+
         response = {
             "data": new_post,
             "response_status": {
@@ -266,6 +305,7 @@ async def update_post(
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
+
         }
         return SuccessResponse[ResponseCreateUpdatePost](**response)
     except:
@@ -305,4 +345,140 @@ async def get_all_posts(user: dict = Depends(get_current_user)):
         return http_exception(
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
             code=CODE_ERROR_SERVER,
+        )
+
+@router.post(
+    path="/post/{post_code}/like",
+    name="like_post",
+    description="like post",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseLikePost],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def like_post(post_code: str, user: dict = Depends(get_current_user)):
+    status_code = code = message = ""
+    try:
+        post = await get_post_by_post_code(post_code)
+        if not post:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+        if user['user_code'] in post['liked_by']:
+            new_post_like_info = await update_like_post(post['post_code'], user['user_code'], False)
+            status = False
+        else:
+            status = True
+            new_post_like_info = await update_like_post(post['post_code'], user['user_code'], True)
+            if user['user_code'] != post['created_by']:
+                notification = Notification(
+                    notification_code=str(uuid.uuid4()),
+                    user_code=post['created_by'],
+                    user_code_guest=user['user_code'],
+                    content='đã thích bài viết của bạn ',
+                )
+                new_noti = await create_noti(notification)
+                if not new_noti:
+                    logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+
+        list_liked_by = []
+        # if len(new_post_like_info['liked_by']) >= 3:
+        for index, user_code in enumerate(new_post_like_info['liked_by'][::-1]):
+            if user_code != post['created_by'] and len(list_liked_by) < 4:
+                list_liked_by.append(user_code)
+
+        list_user = await get_list_user_in_list(list_user_code=list_liked_by)
+        list_user = await list_user.to_list(None)
+        response = {
+            "data": {
+                "status": status,
+                "like_number": len(new_post_like_info['liked_by']),
+                "liked_by": list_user
+            },
+
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[ResponseLikePost](**response)
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+        )
+
+
+@router.post(
+    path="/post/{post_code}/share",
+    name="share_post",
+    description="like post",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseSharePost],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+
+async def create_share_post(post_code: str, user: dict = Depends(get_current_user)):
+    status_code = code = message = ""
+    try:
+        post = await get_post_by_post_code(post_code)
+        if not post:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+        # nếu bài viết là bài đã được share lại của người khác thì nhâ share sẽ share bài gốc
+        # B SHARE A, C SHARE BÀI MÀ B ĐÃ SHARE CỦA A => BÀI GỐC LÀ A
+        post_exist = await get_post_of_user_by_code(user['user_code'], post_code)
+        print(post_exist)
+        if post_exist:
+                message = "Bạn đã share bài viết này"
+                status_code = HTTP_400_BAD_REQUEST
+                code = CODE_ERROR_INPUT
+                raise HTTPException(status_code)
+        print(post)
+        post_data = Post(
+            post_code=str(uuid.uuid4()),
+            content=post['content'],
+            image_ids=post['image_ids'],
+            images=post['images'],
+            video_ids=post['video_ids'],
+            videos=post['videos'],
+            root_post=post['post_code'],
+            created_by=user['user_code']
+        )
+        new_share_post = await post_query.create_post(post_data)
+        if new_share_post:
+            notification = Notification(
+                notification_code=str(uuid.uuid4()),
+                user_code=post['created_by'],
+                user_code_guest=user['user_code'],
+                content='đã chia sẻ bài viết của bạn',
+
+            )
+        response = {
+            "data": {
+                    "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
+                },
+                "response_status": {
+                    "code": CODE_SUCCESS,
+                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+                }
+            }
+
+        return SuccessResponse[ResponseSharePost](**response),
+
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+
         )

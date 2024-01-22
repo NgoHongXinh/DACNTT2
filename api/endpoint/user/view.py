@@ -9,6 +9,7 @@ from api.endpoint.user.schema import ResponseUser, ResponseUserProfile
 
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_USER_CODE_NOT_FOUND, \
     CODE_ERROR_CANT_CHANGE_INFO, CODE_ERROR_WHEN_UPDATE_CREATE
+from api.library.function import check_friend_or_not_in_profile
 from api.third_parties.cloud.query import upload_image_cloud
 from api.third_parties.database.query.user import get_user_by_code, regex_user_name_email, update_user
 
@@ -47,8 +48,8 @@ async def find_friend(name_or_email: str = Query(default=""), user: dict = Depen
 
 @router.get(
     path="/user/{user_code}",
-    name="123",
-    description="",
+    name="detail_user",
+    description="user page for show in setting",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
@@ -97,7 +98,8 @@ async def get_user_profile(user_code: str, user: dict = Depends(get_current_user
         profile['is_current_login_user'] = True
     else:
         profile['is_current_login_user'] = False
-    print(profile)
+        # chỉ kiêm tra bạn bè nếu vào profile người khác, ko kiểm tra nếu trang đó là của cá nhận
+        profile['friend_status'] = await check_friend_or_not_in_profile(user['user_code'], user_code, user['friends_code'])
     # cần làm thêm trang cá nhân của người đó có được gửi yêu cầu kết bạn hay không
     return SuccessResponse[ResponseUserProfile](**{
         "data": profile,

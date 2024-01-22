@@ -36,4 +36,12 @@ class CreateUpdatePost(BaseModel):
     video: str = Field("", example='')
 
 
+class ResponseLikePost(BaseModel):
+    status: bool = Field(False, description="True: like bài viết, False: displike bài viết")
+    like_number: int = Field(default=0, description="số lượng like")
+    liked_by: List[ResponseUser] = Field(None)
 
+
+
+class ResponseSharePost(BaseModel):
+    message: str = Field("")

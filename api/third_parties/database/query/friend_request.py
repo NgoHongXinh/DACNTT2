@@ -9,7 +9,8 @@ async def get_friend(user_code_request, user_code_receive_request):
     db = await MongoDBService().get_db()
     return await db['friend_request'].find_one({
         "user_code_request": user_code_request,
-        "user_code_receive": user_code_receive_request
+        "user_code_receive": user_code_receive_request,
+        "status": False
     })
 
 

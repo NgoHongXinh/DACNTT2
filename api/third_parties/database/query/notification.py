@@ -35,3 +35,9 @@ async def update_notification(notification_code, user_code):
     )
 
     return result
+
+
+async def create_noti(noti: Notification):
+    db = await MongoDBService().get_db()
+    result = await db['notification'].insert_one(noti.to_json())
+    return result.inserted_id

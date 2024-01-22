@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel,  Field
 
 from api.third_parties.database.mongodb import PyObjectId
@@ -20,3 +22,17 @@ class ResponseFriendRequest(BaseModel):
     status: bool = Field("")
 
 
+class ResponseFriendOfUser(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    user_code: str = Field("", example='')
+    fullname: str = Field("", example='')
+    picture: str = Field("", example='')
+    background_picture: str = Field("", example='')
+    picture_id: str = Field("", example='')
+    friend_status: str = Field(default="friend",
+                                description='''kiểm tra trạng thái bạn bè của trang mà mình tìm kiếm với user hiện tại
+                                <br>friend: bạn 
+                                <br> pendding: chờ accept lời mời
+                                <br> not_friend: không phải bản, ko có lời mời
+                                '''
+                                )
