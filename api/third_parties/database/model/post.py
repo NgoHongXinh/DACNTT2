@@ -20,7 +20,6 @@ class Post(BaseModel):
         self.liked_by = liked_by
         self.comment_post = comment_post
         self.root_post = root_post
-        self.post_code = post_code
 
     def to_json(self):
         data = self.__dict__

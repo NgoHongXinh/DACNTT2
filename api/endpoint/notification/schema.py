@@ -6,8 +6,8 @@ from pydantic import BaseModel,  Field
 
 class ResponseNotification(BaseModel):
     notification_code: str = Field("", example='')
-    user_id: str = Field("", example='')
-    user_id_guest: str = Field("", example='')
+    user_code: str = Field("", example='')
+    user_code_guest: str = Field("", example='')
     content: str = Field("", example='')
     is_checked: bool = Field("", example=False)
     deleted_flag: bool = Field("", example=False)
