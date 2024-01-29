@@ -26,7 +26,8 @@ config_system = {
     "EXPIRES_TIME": int(dotenv_values.get("EXPIRES_TIME", "300")),
     "CLOUD_NAME": dotenv_values.get("CLOUD_NAME"),
     "CLOUD_API_KEY": dotenv_values.get("CLOUD_API_KEY"),
-    "API_SECRET": dotenv_values.get("API_SECRET")
+    "API_SECRECT": dotenv_values.get("API_SECRECT"),
+    "GOOGLE_CLIENT_ID": dotenv_values.get("GOOGLE_CLIENT_ID")
 }
 
 
