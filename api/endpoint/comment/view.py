@@ -160,7 +160,7 @@ async def delete_comment(comment_code: str):
 
         deleted = await comment_query.delete_comment(comment_code)
         if not deleted:
-            return {"message": "Failed comment delete"}
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='Failed comment delete')
 
         return deleted
     except:

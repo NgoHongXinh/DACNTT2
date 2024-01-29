@@ -11,6 +11,8 @@ from settings.init_project import open_api_standard_responses, http_exception, c
 from google.oauth2 import id_token
 from google.auth.transport import requests
 router = APIRouter()
+
+
 @router.get(
     path="/get-token",
     name="get_login_token",
