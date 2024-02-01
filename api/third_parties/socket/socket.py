@@ -3,7 +3,8 @@ import uuid
 import socketio
 
 from api.third_parties.database.model.user_online import UserOnline
-from api.third_parties.database.query.user_online import create_new_user_online, get_user_online, update_user_online
+from api.third_parties.database.query.user_online import create_new_user_online, get_user_online, update_user_online, \
+    disconnect_user_online_socketid
 
 sio_server = socketio.AsyncServer(
     async_mode='asgi',
@@ -24,14 +25,20 @@ async def connect(sid, environ, auth):
 @sio_server.event
 async def disconnect(sid):
     print(f'{sid}: disconnected')
+    await disconnect_user_online_socketid(socket_id=sid)
 
+
+@sio_server.event
+async def change_status_user_online(sid):
+    print(f'{sid}: disconnected')
+    await disconnect_user_online_socketid(socket_id=sid)
 
 @sio_server.on("new_user_connect")
 async def new_user(sid, user_code):
     print(user_code, sid)
-    user_online = get_user_online(user_code)
+    user_online = await get_user_online(user_code)
     if not user_online:
-        new_user_online = UserOnline(user_online_code=uuid.uuid4(), user_code=user_code, socket_id=sid, status=True)
+        new_user_online = UserOnline(user_online_code=str(uuid.uuid4()), user_code=user_code, socket_id=sid, status=True)
         await create_new_user_online(new_user_online)
     else:
         await update_user_online(user_code=user_code, data_update={"socket_id": sid, "status": True})

@@ -18,6 +18,15 @@ async def update_user_online(user_code, data_update: dict):
         return_document=ReturnDocument.AFTER
     )
 
+async def disconnect_user_online_socketid(socket_id):
+    db = await MongoDBService().get_db()
+    return await db['user_online'].find_one_and_update(
+        {"socket_id": socket_id},
+        {"$set": {"status": False}},
+        return_document=ReturnDocument.AFTER
+    )
+
+
 
 async def get_user_online(user_code):
     db = await MongoDBService().get_db()
