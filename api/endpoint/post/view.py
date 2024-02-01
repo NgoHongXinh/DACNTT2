@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import List
 
-from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.authorization import get_current_user
@@ -25,10 +25,12 @@ from settings.init_project import open_api_standard_responses, http_exception
 router = APIRouter()
 
 logger = logging.getLogger("post.view.py")
+
+
 @router.get(
     path=f"/posts",
     name="get_all_post",
-    description="get all post of user ",
+    description="get all post of user",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
@@ -37,25 +39,68 @@ logger = logging.getLogger("post.view.py")
     )
 )
 async def get_posts(user: dict = Depends(get_current_user)):
-    posts = await post_query.get_all_post_by_user_code(user['user_code'])
-    for post in posts:
-        post['is_liked'] = False
-        if user['user_code'] in post['liked_by']:  # kiểm tra chủ bài dăng đã like hay chưa
-            post['is_liked'] = True
+    try:
+        posts = await post_query.get_all_post_by_user_code(user['user_code'])
+        for post in posts:
+            post['is_liked'] = False
+            if user['user_code'] in post['liked_by']:  # kiểm tra chủ bài dăng đã like hay chưa
+                post['is_liked'] = True
 
-    response = {
-        "data": posts,
-        "response_status": {
-            "code": CODE_SUCCESS,
-            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        response = {
+            "data": posts,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
         }
-    }
-    return SuccessResponse[List[ResponsePost]](**response)
+        return SuccessResponse[List[ResponsePost]](**response)
+
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
+
+
+@router.get(
+    path="/post/user/{user_code}",
+    name="get_all_post_of_user",
+    description="get all posts of user",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[List[ResponsePost]],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def get_all_posts(user: dict = Depends(get_current_user), last_user_ids: str = Query(default="") ):
+    try:
+        list_post_cursor = await post_query.get_all_post_by_user_code(
+            user_code=user['user_code'],
+            last_post_id=last_user_ids
+        )
+        list_post_cursor = await list_post_cursor.to_list(None)
+
+        response = {
+            "data": list_post_cursor,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[List[ResponsePost]](**response)
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
 
 
 @router.get(
     path="/post/{post_code}",
-    name="get_post",
+    name="get_a_post",
     description="get information of a post",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
@@ -65,18 +110,26 @@ async def get_posts(user: dict = Depends(get_current_user)):
     )
 )
 async def get_post(post_code):
-    post = await post_query.get_post_by_post_code(post_code)
-    if not post:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
+    try:
+        post = await post_query.get_post_by_post_code(post_code)
+        if not post:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
 
-    response = {
-        "data": post,
-        "response_status": {
-            "code": CODE_SUCCESS,
-            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        response = {
+            "data": post,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
         }
-    }
-    return SuccessResponse[ResponsePost](**response)
+        return SuccessResponse[ResponsePost](**response)
+
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
 
 
 @router.post(
@@ -96,52 +149,63 @@ async def create_post(
         video_upload: UploadFile = File(None),
         user: dict = Depends(get_current_user)
 ):
-    if not content and not images_upload and not video_upload:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_INPUT, message='content, image, video not allow empty')
-    if images_upload and len(images_upload) > 4:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST,
-                              code=CODE_ERROR_INPUT,
-                              message='Maximum image number is 4')
+    try:
+        if not content and not images_upload and not video_upload:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_INPUT,
+                                  message='content, image, video not allow empty')
+        if images_upload and len(images_upload) > 4:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST,
+                                  code=CODE_ERROR_INPUT,
+                                  message='Maximum image number is 4')
 
-    image_ids = []
-    video_ids = []
-    videos = []
-    images = []
+        image_ids = []
+        video_ids = []
+        videos = []
+        images = []
 
-    if images_upload:
-        for image in images_upload:
-            data_image_byte = await image.read()
-            info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
-            image_ids.append(info_image_upload['public_id'])
-            images.append(info_image_upload['url'])
+        if images_upload:
+            for image in images_upload:
+                data_image_byte = await image.read()
+                info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
+                image_ids.append(info_image_upload['public_id'])
+                images.append(info_image_upload['url'])
 
-    if video_upload:
-        data_video_byte = await video_upload.read()
-        info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
-        video_ids.append(info_video_upload['public_id'])
-        videos.append(info_video_upload['url'])
+        if video_upload:
+            data_video_byte = await video_upload.read()
+            info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
+            video_ids.append(info_video_upload['public_id'])
+            videos.append(info_video_upload['url'])
 
-    post_data = Post(
-        post_code=str(uuid.uuid4()),
-        content=content,
-        image_ids=image_ids,
-        images=images,
-        video_ids=video_ids,
-        videos=videos,
-        created_by=user['user_code']
-    )
+        post_data = Post(
+            post_code=str(uuid.uuid4()),
+            content=content,
+            image_ids=image_ids,
+            images=images,
+            video_ids=video_ids,
+            videos=videos,
+            created_by=user['user_code']
+        )
 
-    new_post_id = await post_query.create_post(post_data)
-    new_post = await get_post_by_id(new_post_id)
-    new_post['created_by'] = user
-    response = {
-        "data": new_post,
-        "response_status": {
-            "code": CODE_SUCCESS,
-            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        new_post_id = await post_query.create_post(post_data)
+        new_post = await get_post_by_id(new_post_id)
+        new_post['created_by'] = user
+
+        response = {
+            "data": new_post,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
         }
-    }
-    return SuccessResponse[ResponseCreateUpdatePost](**response)
+        return SuccessResponse[ResponseCreateUpdatePost](**response)
+
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
+
 
 @router.delete(
     path="/post/{post_code}",
@@ -155,21 +219,30 @@ async def create_post(
     )
 )
 async def delete_post(post_code: str):
-    post = await post_query.delete_post(post_code)
+    try:
+        post = await post_query.get_post_by_post_code(post_code) # lấy thông tin bài viết
+        if not post:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
+        else:
+            await comment_query.delete_comments_by_post(post_code) # xóa tất cả comment của bài viết
+            for image_id in post.get("image_ids", []): # xóa tất cả ảnh của bài viết
+                await delete_image(image_id)
+            for video_id in post.get("video_id", []): # xóa tất cả video của bài viết
+                await delete_image(video_id)
+        deleted = await post_query.delete_post(post_code) # xóa bài viết
+        if not deleted:
+            return {"message": "Failed post delete"}
+        return deleted
 
-    if not post:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
-    response = {
-        "data": post,
-        "response_status": {
-            "code": CODE_SUCCESS,
-            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-        }
-    }
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
 
-    return None
 
-@router.post(
+@router.put(
     path="/post/{post_code}",
     name="update_post",
     description="update post",
@@ -188,54 +261,60 @@ async def update_post(
         user: dict = Depends(get_current_user)
 
 ):
-    if not content and not images_upload and not video_upload:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
-    image_ids =[]
-    video_ids =[]
-    videos =[]
-    images =[]
+    try:
+        if not content and not images_upload and not video_upload:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
+        image_ids = []
+        video_ids = []
+        videos = []
+        images = []
 
+        post_need_update = await get_post_by_post_code(post_code)
+        if not post_need_update:
+            return http_exception(HTTP_400_BAD_REQUEST, CODE_ERROR_POST_CODE_NOT_FOUND)
+        list_image_need_delete_incloud = post_need_update['image_ids']
+        list_video_need_delete_incloud = post_need_update['video_ids']
+        if images_upload:
+            for image in images_upload:
+                data_image_byte = await image.read()
+                info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
+                image_ids.append(info_image_upload['public_id'])
+                images.append(info_image_upload['url'])
+            post_need_update['images'] = images
+            post_need_update['image_ids'] = image_ids
+            for image_id in list_image_need_delete_incloud:
+                print(image_id)
+                await delete_image(image_id)
 
-    post_need_update = await get_post_by_post_code(post_code)
-    if not post_need_update:
-        return http_exception(HTTP_400_BAD_REQUEST, CODE_ERROR_POST_CODE_NOT_FOUND)
-    list_image_need_delete_incloud = post_need_update['image_ids']
-    list_video_need_delete_incloud = post_need_update['video_ids']
-    if images_upload:
-        for image in images_upload:
-            data_image_byte = await image.read()
-            info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
-            image_ids.append(info_image_upload['public_id'])
-            images.append(info_image_upload['url'])
-        post_need_update['images'] = images
-        post_need_update['image_ids'] = image_ids
-        for image_id in list_image_need_delete_incloud:
-            print(image_id)
-            await delete_image(image_id)
+        if video_upload:
+            data_video_byte = await video_upload.read()
+            info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
+            video_ids.append(info_video_upload['public_id'])
+            videos.append(info_video_upload['url'])
+            post_need_update['videos'] = videos
+            post_need_update['video_ids'] = video_ids
 
-    if video_upload:
-        data_video_byte = await video_upload.read()
-        info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
-        video_ids.append(info_video_upload['public_id'])
-        videos.append(info_video_upload['url'])
-        post_need_update['videos'] = videos
-        post_need_update['video_ids'] = video_ids
+        if content:
+            post_need_update['content'] = content
 
-    if content:
-        post_need_update['content'] = content
+        post_update = await post_query.update_post(post_code, post_need_update)
+        post_update['created_by'] = user
 
-    post_update = await post_query.update_post(post_code, post_need_update)
-
-    post_update['created_by'] = user
-    response = {
-        "data": post_update,
-        "response_status": {
-            "code": CODE_SUCCESS,
-            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        response = {
+            "data": post_update,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
         }
-    }
-    return SuccessResponse[ResponseCreateUpdatePost](**response)
+        return SuccessResponse[ResponseCreateUpdatePost](**response)
 
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
 
 
 @router.post(
@@ -280,7 +359,6 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
             if user_code != post['created_by'] and len(list_liked_by) < 4:
                 list_liked_by.append(user_code)
 
-
         list_user = await get_list_user_in_list(list_user_code=list_liked_by)
         list_user = await list_user.to_list(None)
         response = {
@@ -315,7 +393,6 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-
 async def create_share_post(post_code: str, user: dict = Depends(get_current_user)):
     status_code = code = message = ""
     try:
@@ -329,10 +406,10 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
         post_exist = await get_post_of_user_by_code(user['user_code'], post_code)
         print(post_exist)
         if post_exist:
-                message = "Bạn đã share bài viết này"
-                status_code = HTTP_400_BAD_REQUEST
-                code = CODE_ERROR_INPUT
-                raise HTTPException(status_code)
+            message = "Bạn đã share bài viết này"
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
         print(post)
         post_data = Post(
             post_code=str(uuid.uuid4()),
@@ -355,13 +432,13 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
             )
         response = {
             "data": {
-                    "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
-                },
-                "response_status": {
-                    "code": CODE_SUCCESS,
-                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-                }
+                "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
+            },
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
+        }
 
         return SuccessResponse[ResponseSharePost](**response),
 

@@ -40,6 +40,5 @@ class ResponseLikePost(BaseModel):
     liked_by: List[ResponseUser] = Field(None)
 
 
-
 class ResponseSharePost(BaseModel):
     message: str = Field("")
