@@ -6,7 +6,6 @@ from api.endpoint.friend_request import router as friend_request_route
 from api.endpoint.message import router as message_route
 from api.endpoint.notification import router as notification_route
 from api.endpoint.post import router as post_route
-from api.endpoint.user_online import router as user_online_route
 from api.endpoint.authen import router as authen_route
 
 
