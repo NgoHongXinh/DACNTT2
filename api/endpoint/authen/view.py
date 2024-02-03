@@ -54,8 +54,8 @@ async def get_token(user: OAuth2PasswordRequestForm = Depends()):
 
 )
 async def get_token_google(info_token: RequestInfoToken):
-    print(info_token)
+    # print(info_token)
     token = ''
     idinfo = id_token.verify_oauth2_token(info_token.credential, requests.Request(), info_token.client_id)
-    print(idinfo)
+    # print(idinfo)
     return ResponseToken(**{"access_token": token})
