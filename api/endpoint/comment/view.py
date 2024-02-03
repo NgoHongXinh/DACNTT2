@@ -1,13 +1,13 @@
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Depends, Form
+from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
-    CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
+    CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
@@ -72,6 +72,8 @@ async def create_comment(
         user: dict = Depends(get_current_user),
         image_upload: UploadFile = File(None)
 ):
+    status_code = code = message = ""
+
     try:
         if not content and not image_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image upload not allow empty')
@@ -101,19 +103,22 @@ async def create_comment(
 
         # Lấy thông tin bài viết
         post = await post_query.get_post_by_post_code(post_code)
-
+        if not post:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+        
         # Kiểm tra xem có phải chủ bài viết comment hay không
-        # if user['user_code'] != post['created_by']:
-        #     # Tạo notification
-        #     notification = Notification(
-        #         notification_code=str(uuid.uuid4()),
-        #         user_code=post['created_by'],
-        #         user_code_guest=user['user_code'],
-        #         content=f"{user['fullname']} đã bình luận bài viết của bạn"
-        #     )
-        #     new_noti = await notification_query.create_noti(notification)
-        #     if not new_noti:
-        #         logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+        if user['user_code'] != post['created_by']:
+            notification = Notification(
+                notification_code=str(uuid.uuid4()),
+                user_code=post['created_by'],
+                user_code_guest=user['user_code'],
+                content=f"{user['fullname']} đã bình luận bài viết của bạn"
+            )
+            new_noti = await notification_query.create_noti(notification)
+            if not new_noti:
+                logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
 
             # # Gửi socket notification (nếu online)
 
@@ -128,12 +133,12 @@ async def create_comment(
         return SuccessResponse[ResponseCreateUpdateComment](**response)
 
     except:
-        logger.error(exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
-
 
 @router.delete(
     path="/post/{post_code}/comment/{comment_code}",
@@ -218,10 +223,6 @@ async def update_comment(
         print(comment_update)
 
         new_comment = await comment_query.update_comment(comment_code, comment_update)
-        print(new_comment)
-        # user_of_comment = await user_query.get_user_by_code(new_comment[0]['user_code'])
-        # for comment in new_comment:
-        #     comment['created_by'] = user_of_comment
         new_comment['created_by'] = user
 
         response = {
