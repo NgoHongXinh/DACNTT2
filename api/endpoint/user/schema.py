@@ -1,6 +1,7 @@
 from typing import List
 
-from pydantic import BaseModel,  Field
+from pydantic import BaseModel, Field
+
 
 # from api.base.schema import CommonModel
 # from api.third_parties.database.model.base import BaseModel
@@ -45,11 +46,11 @@ class ResponseUserProfile(BaseModel):
         description="sử dụng để kiểm tra xem profile có phải có người đang đăng nhập hay đang của người khác"
     )
     friend_status: str = Field(default="friend",
-                                description='''kiểm tra trạng thái bạn bè của trang mà mình tìm kiếm với user hiện tại
+                               description='''kiểm tra trạng thái bạn bè của trang mà mình tìm kiếm với user hiện tại
                                 <br>friend: bạn 
                                 <br> pendding: chờ accept lời mời
                                 <br> not_friend: không phải bản, ko có lời mời
                                 '''
-                                )
+                               )
 
 

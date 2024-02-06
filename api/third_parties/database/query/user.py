@@ -1,6 +1,10 @@
+import uuid
+
 from pymongo import ReturnDocument
+from datetime import datetime
 
 from api.library.function import verify_password, get_password_hash
+from api.third_parties.database.model.user import User
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 from api.third_parties.database.query.paging import paging
 
@@ -10,7 +14,7 @@ async def get_user_id(user_id):
     return await db['user'].find_one({"_id": is_valid_object_id(user_id)})
 
 
-async def check_user(username: str, password: str):
+async def check_user(username: str, password: str):  # check user login
     db = await MongoDBService().get_db()
     user = await db['user'].find_one({"username": username})
     if user:
@@ -25,7 +29,12 @@ async def get_user_by_code(user_code):
     return await db['user'].find_one({"user_code": user_code})
 
 
-async def regex_user_name_email(name_or_email: str):
+async def get_user_by_email(email):
+    db = await MongoDBService().get_db()
+    return await db['user'].find_one({"username": email})
+
+
+async def regex_user_name_email(name_or_email: str):  # find user by name or email
     db = await MongoDBService().get_db()
     cursor = db['user'].find({
         '$or': [
@@ -46,10 +55,17 @@ async def regex_user_name_email(name_or_email: str):
     return data
 
 
+async def create_new_user(data: User):
+    db = await MongoDBService().get_db()
+    # user_code = str(uuid.uuid4())
+    result = await db['user'].insert_one(data.to_json())
+    return result.inserted_id
+
+
 async def update_user(user_id, data_update):
     db = await MongoDBService().get_db()
     update_result = await db['user'].find_one_and_update(
-        {"_id": is_valid_object_id((user_id))},
+        {"_id": is_valid_object_id(user_id)},
         {"$set": data_update},
         return_document=ReturnDocument.AFTER,
     )
@@ -85,3 +101,5 @@ async def get_list_user_in_list(list_user_code: list, last_user_id: str = ""):
         db=db,
         sort=1)
     return list_friend_request_cursor
+
+

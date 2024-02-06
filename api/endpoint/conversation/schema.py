@@ -9,5 +9,13 @@ from pydantic import BaseModel,  Field
 
 class ResponseConversation(BaseModel):
     conversation_code: str = Field("", example='')
-    # members: list[ObjectId] = Field("",example=[ObjectId('')])
     members: List[str] = Field([], example=[''])
+
+
+class ResponseCreateConversation(BaseModel):
+    message: str = Field("")
+    conversation_code: str = Field("", example='')
+
+
+class RequestCreateConversation(BaseModel):
+    user_code_to_chat: str = Field("", example='')

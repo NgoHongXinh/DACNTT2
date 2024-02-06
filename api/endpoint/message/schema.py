@@ -6,9 +6,12 @@ from pydantic import BaseModel,  Field
 
 class ResponseMessage(BaseModel):
     message_code: str = Field("", example='')
-    # conversationId: ObjectId = Field("", example=ObjectId(''))
-    # senderId: ObjectId = Field("", example=ObjectId(''))
-    conversation_id: str = Field("", example='')
-    sender_id: str = Field("", example='')
+    conversation_code: str = Field("", example='')
+    sender_code: str = Field("", example='')
+    text: str = Field("", example='')
+
+
+class RequestCreateMessage(BaseModel):
+    conversation_code: str = Field("", example='')
     text: str = Field("", example='')
 

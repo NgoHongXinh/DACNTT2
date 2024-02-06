@@ -1,11 +1,11 @@
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment
+from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment, ResponseDeleteComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
@@ -33,20 +33,57 @@ router = APIRouter()
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_comment(post_code: str):
+async def get_all_comment(post_code: str, last_comment_ids: str = Query(default="")):
     try:
         if not post_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
-        comments = await comment_query.get_all_comment_by_post_code(post_code)
+        list_post_cursor = await comment_query.get_all_comment_by_post_code(
+            post_code=post_code,
+            last_comment_id=last_comment_ids
+        )
+        list_post_cursor = await list_post_cursor.to_list(None)
+
         response = {
-            "data": comments,
+            "data": list_post_cursor,
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[List[ResponseComment]](**response)
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
+
+
+@router.get(
+    path="/post/{post_code}/comment/{comment_code}",
+    name="get_comment",
+    description="get a comment of post",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseComment],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def get_a_comment(comment_code: str):
+    try:
+        if not comment_code:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
+        comment = await comment_query.get_comment_by_comment_code(comment_code)
+        response = {
+            "data": comment,
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
         print(response)
-        return SuccessResponse[List[ResponseComment]](**response)
+        return SuccessResponse[ResponseComment](**response)
     except:
         logger.error(exc_info=True)
         return http_exception(
@@ -84,8 +121,8 @@ async def create_comment(
         if image_upload:
             data_image_byte = await image_upload.read()
             info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
-            image_id = info_image_upload['public_id']
-            image = info_image_upload['url']
+            image_id += info_image_upload['public_id']
+            image += info_image_upload['url']
 
         comment_data = Comment(
             comment_code=str(uuid.uuid4()),
@@ -115,7 +152,7 @@ async def create_comment(
                 user_code=post['created_by'],
                 user_code_guest=user['user_code'],
                 content=f"{user['fullname']} đã bình luận bài viết của bạn"
-            )
+            )  # Tạo thông báo
             new_noti = await notification_query.create_noti(notification)
             if not new_noti:
                 logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
@@ -147,7 +184,7 @@ async def create_comment(
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_201_CREATED,
-        success_response_model=None,
+        success_response_model=SuccessResponse[ResponseDeleteComment],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -155,8 +192,8 @@ async def delete_comment(comment_code: str):
     try:
         if not comment_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code not allow empty')
-        comment = await comment_query.get_comment_by_comment_code(comment_code)
 
+        comment = await comment_query.get_comment_by_comment_code(comment_code)
         if not comment:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_COMMENT_CODE_NOT_FOUND)
         else:
@@ -167,7 +204,13 @@ async def delete_comment(comment_code: str):
         if not deleted:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='Failed comment delete')
 
-        return deleted
+        return SuccessResponse[ResponseDeleteComment](**{
+            "data": {"message": "delete comment success"},
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        })
     except:
         logger.error(exc_info=True)
         return http_exception(
@@ -198,8 +241,8 @@ async def update_comment(
         if not comment_code and not content and not image_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code, content, image upload '
                                                                             'not allow empty')
-        image_id = []
-        image = []
+        image_id = ""
+        image = ""
 
         comment_update = await comment_query.get_comment_by_comment_code(comment_code)
         if not comment_update:
@@ -210,13 +253,13 @@ async def update_comment(
         if image_upload:
             data_image_byte = await image_upload.read()
             info_image_upload = await upload_image_comment_cloud(data_image_byte, user['user_code'])
-            image_id.append(info_image_upload['public_id'])
-            image.append(info_image_upload['url'])
+            image_id += info_image_upload['public_id']
+            image += info_image_upload['url']
             comment_update['image_id'] = image_id
             comment_update['image'] = image
             for image_ids in list_image_need_delete_in_cloud:
                 print(image_ids)
-                print(await delete_image(image_ids))
+                await delete_image(image_ids)
 
         if content:
             comment_update['content'] = content

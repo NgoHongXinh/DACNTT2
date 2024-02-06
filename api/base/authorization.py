@@ -10,6 +10,7 @@ from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import http_exception, config_system
 
 
+# Tạo JWT token chứa thông tin xác thực user để trả về cho client
 async def create_access_token(username: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=config_system['EXPIRES_TIME'])
     encode_data = {"exp": expire, "sub": str(username)}
@@ -17,6 +18,8 @@ async def create_access_token(username: str) -> str:
     return encoded_jwt
 
 
+# Xác thực và lấy thông tin user từ JWT token
+# Kiểm tra tính hợp lệ của token khi request tới API để lấy thông tin user từ token để dùng xử lý ở mục endpoint
 async def get_current_user(
         scheme_and_credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())
 ):

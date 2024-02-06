@@ -114,7 +114,6 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 user_code=user_code_want_request,
                 user_code_guest=user['user_code'],
                 content='đã gửi lời mời kết bạn',
-
             )
             new_noti = await create_noti(notification)
             if not new_noti:
@@ -122,7 +121,7 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
             return SuccessResponse[ResponseCreateFriendRequest](**{
-                "data": {"message":"Send request success"},
+                "data": {"message": "Send request success"},
                 "response_status": {
                     "code": CODE_SUCCESS,
                     "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -281,11 +280,11 @@ async def get_all_friend_of_user(
         # kiểm tra xem danh sách bạn bè của người đó có ai là bạn với mình hay đã gửi lời mời ...
         if user_code != user['user_code']:
             for index, friend in enumerate(get_friend_of_user):
-                # nếu nguowfi đang onle là bạn bè của user_code đang cần tìm thì bỏ qua vì đã kiểm tra ở bên user rồi
+                # nếu nguoi đang online là bạn bè của user_code đang cần tìm thì bỏ qua vì đã kiểm tra ở bên user rồi
                 if user['user_code'] == friend['user_code']:
                     get_friend_of_user.pop(index)
                     break
-            for index, friend in enumerate(get_friend_of_user):
+            for index, friend in enumerate(get_friend_of_user):  # kiểm tra xem user đang onl có phải là bạn bè của người khác không
                 get_friend_of_user[index]['friend_status'] = await check_friend_or_not_in_profile(
                     current_user=user['user_code'],
                     user_code_check=friend['user_code'],

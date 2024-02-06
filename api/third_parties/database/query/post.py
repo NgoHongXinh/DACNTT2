@@ -17,7 +17,7 @@ async def get_all_post_by_user_code(user_code: str, last_post_id=""):
         database_name="post",
         query_condition={"created_by": user_code},
         db=db,
-        sort=1)
+        sort=-1)
     return list_post_cursor
 
 

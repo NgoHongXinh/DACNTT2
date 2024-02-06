@@ -11,7 +11,7 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
     CODE_ERROR_CANT_CHANGE_INFO, CODE_ERROR_WHEN_UPDATE_CREATE
 from api.library.function import check_friend_or_not_in_profile
 from api.third_parties.cloud.query import upload_image_cloud
-from api.third_parties.database.query.user import get_user_by_code, regex_user_name_email, update_user
+from api.third_parties.database.query.user import get_user_by_code, regex_user_name_email, update_user, create_new_user
 
 from settings.init_project import open_api_standard_responses, http_exception
 

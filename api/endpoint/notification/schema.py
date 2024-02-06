@@ -11,3 +11,7 @@ class ResponseNotification(BaseModel):
     content: str = Field("", example='')
     is_checked: bool = Field("", example=False)
     deleted_flag: bool = Field("", example=False)
+
+
+class ResponseDeleteNotification(BaseModel):
+    message: str = Field("")

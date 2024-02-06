@@ -9,8 +9,9 @@ from api.base.authorization import get_current_user
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
     CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost
-from api.third_parties.cloud.query import upload_image_cloud, delete_image
+from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
+    ResponseDeletePost
+from api.third_parties.cloud.query import upload_image_cloud, delete_image, upload_video
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.model.post import Post
 from api.third_parties.database.query import post as post_query
@@ -74,11 +75,11 @@ async def get_posts(user: dict = Depends(get_current_user)):
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_posts(user: dict = Depends(get_current_user), last_user_ids: str = Query(default="") ):
+async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
     try:
         list_post_cursor = await post_query.get_all_post_by_user_code(
             user_code=user['user_code'],
-            last_post_id=last_user_ids
+            last_post_id=last_post_ids
         )
         list_post_cursor = await list_post_cursor.to_list(None)
 
@@ -109,7 +110,7 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_user_ids: s
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_post(post_code):
+async def get_post(post_code: str):
     try:
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
@@ -159,8 +160,8 @@ async def create_post(
                                   message='Maximum image number is 4')
 
         image_ids = []
-        video_ids = []
-        videos = []
+        video_ids = ""
+        videos = ""
         images = []
 
         if images_upload:
@@ -172,9 +173,9 @@ async def create_post(
 
         if video_upload:
             data_video_byte = await video_upload.read()
-            info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
-            video_ids.append(info_video_upload['public_id'])
-            videos.append(info_video_upload['url'])
+            info_video_upload = await upload_video(data_video_byte, user['user_code'])
+            video_ids += info_video_upload['public_id']
+            videos += info_video_upload['url']
 
         post_data = Post(
             post_code=str(uuid.uuid4()),
@@ -214,25 +215,33 @@ async def create_post(
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=None,
+        success_response_model=SuccessResponse[ResponseDeletePost],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
 async def delete_post(post_code: str):
     try:
-        post = await post_query.get_post_by_post_code(post_code) # lấy thông tin bài viết
+        if not post_code:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
+        post = await post_query.get_post_by_post_code(post_code)  # lấy thông tin bài viết
         if not post:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
         else:
-            await comment_query.delete_comments_by_post(post_code) # xóa tất cả comment của bài viết
-            for image_id in post.get("image_ids", []): # xóa tất cả ảnh của bài viết
+            await comment_query.delete_comments_by_post(post_code)  # xóa tất cả comment của bài viết
+            for image_id in post.get("image_ids", []):  # xóa tất cả ảnh của bài viết
                 await delete_image(image_id)
-            for video_id in post.get("video_id", []): # xóa tất cả video của bài viết
+            for video_id in post.get("video_id", ""):  # xóa tất cả video của bài viết
                 await delete_image(video_id)
         deleted = await post_query.delete_post(post_code) # xóa bài viết
         if not deleted:
-            return {"message": "Failed post delete"}
-        return deleted
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='Failed post delete')
+        return SuccessResponse[ResponseDeletePost](**{
+            "data": {"message": "delete post success"},
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        })
 
     except:
         logger.error(exc_info=True)
@@ -265,8 +274,8 @@ async def update_post(
         if not content and not images_upload and not video_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
         image_ids = []
-        video_ids = []
-        videos = []
+        video_ids = ""
+        videos = ""
         images = []
 
         post_need_update = await get_post_by_post_code(post_code)
@@ -288,11 +297,14 @@ async def update_post(
 
         if video_upload:
             data_video_byte = await video_upload.read()
-            info_video_upload = await upload_image_cloud(data_video_byte, user['user_code'])
-            video_ids.append(info_video_upload['public_id'])
-            videos.append(info_video_upload['url'])
+            info_video_upload = await upload_video(data_video_byte, user['user_code'])
+            video_ids += info_video_upload['public_id']
+            videos += info_video_upload['url']
             post_need_update['videos'] = videos
             post_need_update['video_ids'] = video_ids
+            for video_id in list_video_need_delete_incloud:
+                print(video_id)
+                await delete_image(video_id)
 
         if content:
             post_need_update['content'] = content
@@ -347,7 +359,7 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
                     notification_code=str(uuid.uuid4()),
                     user_code=post['created_by'],
                     user_code_guest=user['user_code'],
-                    content='đã thích bài viết của bạn ',
+                    content=f"{user['fullname']} đã thích bài viết của bạn",
                 )
                 new_noti = await create_noti(notification)
                 if not new_noti:
@@ -427,9 +439,12 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
                 notification_code=str(uuid.uuid4()),
                 user_code=post['created_by'],
                 user_code_guest=user['user_code'],
-                content='đã chia sẻ bài viết của bạn',
-
+                content=f"{user['fullname']} đã chia sẻ bài viết của bạn",
             )
+            new_noti = await create_noti(notification)
+            if not new_noti:
+                logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+
         response = {
             "data": {
                 "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
