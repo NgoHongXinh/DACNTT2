@@ -164,6 +164,14 @@ async def accept_friend(
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_FRIEND_REQUEST_NOT_FOUND
             raise HTTPException(status_code)
+        notification = Notification(
+            notification_code=str(uuid.uuid4()),
+            user_code=user_code_in_queue_request,
+            user_code_guest=user['user_code'],
+            content='đã chấp nhận lời mời kết bạn',
+
+        )
+        new_noti = await create_noti(notification)
         # cập nhật lại danh sách bạn bè cho cả 2 người
         # nếu xảy ra lỗi trong quá trình cập nhật => rollback lại trạng thái trước khi cập nhật của cả 2 user
         check_exist_user = await get_user_by_code(user_code_in_queue_request)
