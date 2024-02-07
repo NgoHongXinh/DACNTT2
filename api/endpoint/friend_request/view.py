@@ -262,8 +262,8 @@ async def deny_friend(friend_request_code: str, user: dict = Depends(get_current
 
 @router.get(
     path="/get-all-friend/user/{user_code}",
-    name="deny_new_friend",
-    description="deny friend request",
+    name="get_all_friend_of_user",
+    description="get all friend of user",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
