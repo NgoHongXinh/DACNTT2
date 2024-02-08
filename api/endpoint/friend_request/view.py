@@ -16,7 +16,7 @@ from api.library.function import check_friend_or_not_in_profile
 from api.third_parties.database.model.friend_request import FriendRequest
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.query.friend_request import get_friend, create_fr, update_friend_request, \
-    get_all_friend_request, delete_friend_request
+    get_all_friend_request, delete_friend_request, get_friend_request_of_2_user
 from api.third_parties.database.query.notification import create_noti
 from api.third_parties.database.query.user import get_user_by_code, update_user_friend, remove_user_friend, \
     get_list_user_in_list
@@ -306,6 +306,53 @@ async def get_all_friend_of_user(
             }
         }
         return SuccessResponse[List[ResponseFriendOfUser]](**response)
+
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+        )
+
+
+@router.delete(
+    path="/delete-friend/{user_code}",
+    name="delete_friend",
+    description="delete friend of user",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseCreateFriendRequest],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+
+)
+async def delete_friend(
+        user_code: str,
+        user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+    try:
+        print(user_code)
+        user_info = await get_user_by_code(user_code)
+        if not user_info:
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            status_code = HTTP_400_BAD_REQUEST
+            raise HTTPException(status_code)
+        if user_code in user['friends_code'] and user['user_code'] in user_info['friends_code']:
+            await remove_user_friend(user['user_code'], user_code)
+            await remove_user_friend(user_code, user['user_code'])
+            friend_request_info = await get_friend_request_of_2_user(user_code, user['user_code'])
+
+            await delete_friend_request(friend_request_info['friend_request_code'])
+
+        return SuccessResponse[ResponseCreateFriendRequest](**{
+            "data": {"message": "delete friend success"},
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        })
 
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
