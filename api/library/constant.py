@@ -42,3 +42,4 @@ PAGING_LIMIT = 10
 FRIEND = 'friend'
 NOT_FRIEND = 'not_friend'
 PENDDING = 'pendding'
+WAIT_ACCEPT = 'wait_accept'
