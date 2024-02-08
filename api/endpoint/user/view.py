@@ -47,7 +47,7 @@ async def find_friend(name_or_email: str = Query(default=""), user: dict = Depen
 
 
 @router.get(
-    path="/user/{user_code}",
+    path="/user",
     name="detail_user",
     description="user page for show in setting",
     status_code=HTTP_200_OK,
@@ -58,19 +58,14 @@ async def find_friend(name_or_email: str = Query(default=""), user: dict = Depen
     )
 
 )
-async def get_user_login(user_code: str, user: dict = Depends(get_current_user)):
-    if not user_code:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user_code not allow empty')
-    if user_code == user['user_code']:
-        response = {
-            "data": user,
-            "response_status": {
-                "code": CODE_SUCCESS,
-                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-            }
+async def get_user_login(user: dict = Depends(get_current_user)):
+    response = {
+        "data": user,
+        "response_status": {
+            "code": CODE_SUCCESS,
+            "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+        }
     }
-    else:
-        return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_USER_CODE_NOT_FOUND)
 
     return SuccessResponse[ResponseUser](**response)
 

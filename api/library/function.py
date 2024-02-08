@@ -1,7 +1,7 @@
 
 from passlib.context import CryptContext
 
-from api.library.constant import FRIEND, PENDDING, NOT_FRIEND
+from api.library.constant import FRIEND, PENDDING, NOT_FRIEND, WAIT_ACCEPT
 from api.third_parties.database.query.friend_request import get_friend
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -23,8 +23,12 @@ async def check_friend_or_not_in_profile(current_user, user_code_check, list_fri
         return FRIEND
     else:
         check_is_send_request_or_not = await get_friend(current_user, user_code_check)
-        if check_is_send_request_or_not:
+        check_current_user_receive_send_friend_request = await get_friend(user_code_check, current_user)
+        print(check_current_user_receive_send_friend_request)
+        if check_is_send_request_or_not and not check_current_user_receive_send_friend_request:
             return PENDDING
+        if check_current_user_receive_send_friend_request and not check_is_send_request_or_not:
+            return WAIT_ACCEPT
         return NOT_FRIEND
 
 
