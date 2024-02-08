@@ -12,7 +12,8 @@ from api.endpoint.conversation.schema import ResponseConversation, RequestCreate
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
     CODE_ERROR_USER_CODE_NOT_FOUND
 from api.third_parties.database.model.conversation import Conversation
-from api.third_parties.database.query.conversation import get_conversation_by_code, get_all_conversation_of_current_user, create_conversation
+from api.third_parties.database.query.conversation import get_conversation_by_code, \
+    get_all_conversation_of_current_user, create_conversation, get_conversation_by_members
 from api.third_parties.database.query.friend_request import get_friend
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
@@ -96,9 +97,28 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
 async def create_conversation(user_chat: RequestCreateConversation,
                               user: dict = Depends(get_current_user)):
     try:
+        receiver_id = user_chat.user_code_to_chat
+        # Kiểm tra xem user có tồn tại không
+        receiver = await get_user_by_code(receiver_id)
+        if not receiver:
+            return http_exception(
+                status_code=HTTP_400_BAD_REQUEST,
+                message=f"User with user_code {receiver_id} does not exist."
+            )
+
+        # Kiểm tra xem conversation đã tồn tại chưa
+        existing_conversation = await get_conversation_by_members([user['user_code'], receiver_id])
+        if existing_conversation:
+            return SuccessResponse[ResponseConversation](**{
+                "data": existing_conversation,
+                "response_status": {
+                    "code": CODE_SUCCESS,
+                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+                }
+            })
 
         conversation_data = Conversation(
-            members=[user_chat.user_code_to_chat],
+            members=[user['user_code'], receiver_id], # 2 người tham gia cuộc trò chuyện
             conversation_code=str(uuid.uuid4()),
         )
         conversation = await create_conversation(conversation_data)

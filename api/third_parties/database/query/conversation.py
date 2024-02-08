@@ -25,5 +25,7 @@ async def create_conversation(data: Conversation):
     return result.inserted_id
 
 
-
+async def get_conversation_by_members(members):
+    db = await MongoDBService().get_db()
+    return await db['conversation'].find_one({"members": {"$all": members}})
 

@@ -69,6 +69,7 @@ async def get_token_google(info_token: RequestInfoToken):
             status_code=401,
             code=CODE_LOGIN_FAIL
         )
+    # Kiểm tra email có phải email sinh viên không
     if id_info['email'].endswith("@student.tdtu.edu.vn"):
         # Kiểm tra user có tồn tại chưa
         user = await get_user_by_email(id_info['email'])
