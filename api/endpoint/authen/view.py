@@ -13,7 +13,7 @@ from google.auth.transport import requests
 router = APIRouter()
 
 
-@router.get(
+@router.post(
     path="/get-token",
     name="get_login_token",
     description="get token for login system",

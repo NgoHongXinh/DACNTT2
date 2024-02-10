@@ -94,10 +94,10 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
             code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
 
-        friend_request = await get_friend(user['user_code'], user_code_want_request)
+        friend_request = await get_friend_request_of_2_user(user['user_code'], user_code_want_request, False)
         if friend_request:
             status_code = HTTP_400_BAD_REQUEST
-            message = "you already send request friend to this people"
+            message = "Send friend request is create between 2 people"
             code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
 
@@ -225,7 +225,7 @@ async def accept_friend(
 
 
 @router.delete(
-    path="/deny-friend-request/{friend_request_code}",
+    path="/deny-friend-request/{user_request_code}",
     name="deny_new_friend",
     description="deny friend request",
     status_code=HTTP_200_OK,
@@ -236,10 +236,11 @@ async def accept_friend(
     )
 
 )
-async def deny_friend(friend_request_code: str, user: dict = Depends(get_current_user)):
+async def deny_friend(user_request_code: str, user: dict = Depends(get_current_user)):
     code = message = status_code = ''
     try:
-        deny_friend = await delete_friend_request(friend_request_code)
+        get_friend_request = await get_friend_request_of_2_user(user_request_code,user['user_code'], False)
+        deny_friend = await delete_friend_request(get_friend_request['friend_request_code'])
         if not deny_friend:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_FRIEND_REQUEST_NOT_FOUND
