@@ -32,12 +32,18 @@ router = APIRouter()
 )
 async def find_friend(name_or_email: str = Query(default=""), user: dict = Depends(get_current_user)):
 
-    data = None
+    list_data = []
     if name_or_email:
-        data = await regex_user_name_email(name_or_email)
-
+        list_data = await regex_user_name_email(name_or_email)
+        for data in list_data:
+            if data['user_code'] == user['user_code']:
+                data['is_current_login_user'] = True
+            else:
+                data['is_current_login_user'] = False
+                # chỉ kiêm tra bạn bè nếu vào profile người khác, ko kiểm tra nếu trang đó là của cá nhận
+                data['friend_status'] = await check_friend_or_not_in_profile(user['user_code'], data['user_code'], user['friends_code'])
     response = {
-        'data': data,
+        'data': list_data,
         "response_status": {
             "code": CODE_SUCCESS,
             "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
