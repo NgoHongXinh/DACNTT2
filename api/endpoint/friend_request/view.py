@@ -63,7 +63,7 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
 
 @router.post(
     path="/friend-request/{user_code_want_request}",
-    name="request_new_frient",
+    name="request_new_friend",
     description="send request friend to new people",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(

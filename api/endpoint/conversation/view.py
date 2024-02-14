@@ -21,6 +21,7 @@ from settings.init_project import open_api_standard_responses, http_exception
 router = APIRouter()
 logger = logging.getLogger("conversation.view.py")
 
+
 @router.get(
     path="/conversation",
     name="get_conversation",
@@ -94,19 +95,21 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def create_conversation(user_chat: RequestCreateConversation,
-                              user: dict = Depends(get_current_user)):
+async def create_new_conversation(user_chat: RequestCreateConversation,
+                                  user: dict = Depends(get_current_user)):
     try:
         receiver_id = user_chat.user_code_to_chat
-        # Kiểm tra xem user có tồn tại không
+
+        # Kiểm tra xem user có tồn tại không bằng cách kiểm tra user_code
         receiver = await get_user_by_code(receiver_id)
+
         if not receiver:
             return http_exception(
                 status_code=HTTP_400_BAD_REQUEST,
                 message=f"User with user_code {receiver_id} does not exist."
             )
 
-        # Kiểm tra xem conversation đã tồn tại chưa
+        # Kiểm tra xem conversation đã tồn tại chưa nếu có thì trả về conversation đó
         existing_conversation = await get_conversation_by_members([user['user_code'], receiver_id])
         if existing_conversation:
             return SuccessResponse[ResponseConversation](**{
@@ -117,9 +120,10 @@ async def create_conversation(user_chat: RequestCreateConversation,
                 }
             })
 
+        # Nếu conversation chưa tồn tại thì tạo mới
         conversation_data = Conversation(
-            members=[user['user_code'], receiver_id], # 2 người tham gia cuộc trò chuyện
-            conversation_code=str(uuid.uuid4()),
+            members=[user['user_code'], receiver_id],  # 2 người tham gia cuộc trò chuyện
+            conversation_code=str(uuid.uuid4())
         )
         conversation = await create_conversation(conversation_data)
         response = {

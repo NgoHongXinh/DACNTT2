@@ -13,5 +13,6 @@ class ResponseMessage(BaseModel):
 
 class RequestCreateMessage(BaseModel):
     conversation_code: str = Field("", example='')
+    sender_code: str = Field("", example='')
     text: str = Field("", example='')
 
