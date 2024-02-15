@@ -28,3 +28,6 @@ class ResponseNotificationInfo(BaseModel):
 class ResponseListNotification(BaseModel):
     number_noti_not_read: str = Field("0")
     list_noti_info: List[ResponseNotificationInfo] = Field(...)
+
+class ResponseNumberNotification(BaseModel):
+    number_noti_not_read: str = Field("0")

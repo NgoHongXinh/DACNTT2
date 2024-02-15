@@ -1,14 +1,13 @@
-import uuid
+
 import logging
 
-from typing import List
-from fastapi import APIRouter, Depends, Form, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.notification.schema import ResponseNotification, ResponseListNotification
-from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND, CODE_ERROR_SERVER
-from api.third_parties.database.model.notification import Notification
+from api.endpoint.notification.schema import ResponseNotification, ResponseListNotification, ResponseNumberNotification
+from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND, \
+    CODE_ERROR_SERVER, CODE_ERROR_INPUT
 from api.third_parties.database.query import notification as query_notification
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
@@ -42,18 +41,14 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND)
         list_notifications_cursor = await notifications.to_list(None)
         print(list_notifications_cursor)
-        count = 0
 
         for noti in list_notifications_cursor:
-            if noti['is_checked'] is False:
-                count += 1
             user_guest = await get_user_by_code(noti['user_code_guest'])
             noti["user_info"] = user
             noti["user_guest_info"] = user_guest
 
         response = {
             "data": {
-                "number_noti_not_read": str(count),
                 "list_noti_info": list_notifications_cursor
 
             },
@@ -131,6 +126,48 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
         }
 
         return SuccessResponse[ResponseNotification](**response)
+    except:
+        logger.error(exc_info=True)
+        return http_exception(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            code=CODE_ERROR_SERVER,
+        )
+
+@router.get(
+    path="/number-notification",
+    name="get_number_notification",
+    description="get all number of notification which user not read",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseNumberNotification],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+
+)
+async def get_number_notification(user: dict = Depends(get_current_user)):
+    try:
+        if not user:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
+        notifications = await query_notification.get_noti_not_read(user_code=user['user_code'])
+        list_notifications_cursor = await notifications.to_list(None)
+        count = 0
+
+        for noti in list_notifications_cursor:
+            if noti['is_checked'] is False:
+                count += 1
+
+        response = {
+            "data": {
+                "number_noti_not_read": str(count)
+
+            },
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[ResponseNumberNotification](**response)
     except:
         logger.error(exc_info=True)
         return http_exception(

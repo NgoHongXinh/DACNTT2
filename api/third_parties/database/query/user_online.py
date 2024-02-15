@@ -33,3 +33,13 @@ async def get_user_online(user_code):
     return await db['user_online'].find_one(
         {"user_code": user_code}
     )
+
+
+async def get_user_if_user_is_online(user_code):
+    db = await MongoDBService().get_db()
+    return await db['user_online'].find_one(
+        {"user_code": user_code, "status": True}
+    )
+
+
+

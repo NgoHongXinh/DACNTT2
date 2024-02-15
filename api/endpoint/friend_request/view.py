@@ -20,6 +20,8 @@ from api.third_parties.database.query.friend_request import get_friend, create_f
 from api.third_parties.database.query.notification import create_noti
 from api.third_parties.database.query.user import get_user_by_code, update_user_friend, remove_user_friend, \
     get_list_user_in_list
+from api.third_parties.database.query.user_online import get_user_if_user_is_online
+from api.third_parties.socket.socket import send_noti
 from settings.init_project import open_api_standard_responses, http_exception
 
 
@@ -159,6 +161,7 @@ async def accept_friend(
 ):
     code = message = status_code = ''
     try:
+        check_exist_user = await get_user_by_code(user_code_in_queue_request)
         accept_friend = await update_friend_request(user_code_in_queue_request, user['user_code'], False, True)
         if not accept_friend:
             status_code = HTTP_400_BAD_REQUEST
@@ -172,9 +175,12 @@ async def accept_friend(
 
         )
         new_noti = await create_noti(notification)
+        if new_noti:
+            get_other_user_if_online = await get_user_if_user_is_online(user_code_in_queue_request)
+            if get_other_user_if_online:
+                await send_noti(f'{check_exist_user["fullname"]} đã chấp nhận lời mời kết bạn', get_other_user_if_online['socket_id'])
         # cập nhật lại danh sách bạn bè cho cả 2 người
         # nếu xảy ra lỗi trong quá trình cập nhật => rollback lại trạng thái trước khi cập nhật của cả 2 user
-        check_exist_user = await get_user_by_code(user_code_in_queue_request)
         if not check_exist_user:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_USER_CODE_NOT_FOUND
