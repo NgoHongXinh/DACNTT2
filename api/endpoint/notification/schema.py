@@ -1,7 +1,9 @@
+import datetime
+from typing import List
+
 from pydantic import BaseModel,  Field
 
-# from api.base.schema import CommonModel
-# from api.third_parties.database.model.base import BaseModel
+from api.endpoint.user.schema import ResponseUser
 
 
 class ResponseNotification(BaseModel):
@@ -15,3 +17,22 @@ class ResponseNotification(BaseModel):
 
 class ResponseDeleteNotification(BaseModel):
     message: str = Field("")
+
+
+class ResponseNotificationInfo(BaseModel):
+    notification_code: str = Field("", example='')
+    user_info: ResponseUser
+    user_guest_info: ResponseUser
+    content: str = Field("", example='')
+    is_checked: bool = Field("", example=False)
+    deleted_flag: bool = Field("", example=False)
+    created_time: datetime.datetime
+
+
+class ResponseListNotification(BaseModel):
+    number_noti_not_read: str = Field("0")
+    list_noti_info: List[ResponseNotificationInfo] = Field(...)
+
+
+class ResponseNumberNotification(BaseModel):
+    number_noti_not_read: str = Field("0")

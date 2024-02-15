@@ -13,18 +13,18 @@ async def get_friend(user_code_request, user_code_receive_request):
         "status": False
     })
 
-async def get_friend_request_of_2_user(user_code_1, user_code_2):
+async def get_friend_request_of_2_user(user_code_1, user_code_2, status=True):
     db = await MongoDBService().get_db()
     fr_request = await db['friend_request'].find_one({
         "user_code_request": user_code_1,
         "user_code_receive": user_code_2,
-        "status": True
+        "status": status
     })
     if not fr_request:
         fr_request = await db['friend_request'].find_one({
             "user_code_request": user_code_2,
             "user_code_receive": user_code_1,
-            "status": True
+            "status": status
         })
     return fr_request
 async def create_fr(friend_request: FriendRequest):
