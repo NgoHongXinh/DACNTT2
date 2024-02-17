@@ -43,12 +43,36 @@ router = APIRouter()
 )
 async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict = Depends(get_current_user)):
     try:
+        if not user:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
         list_friend_request_cursor = await get_all_friend_request(
             user_code=user['user_code'],
             last_friend_request_id=last_user_ids)
+        if not list_friend_request_cursor:
+            return http_exception(
+                status_code=HTTP_400_BAD_REQUEST,
+                code=CODE_ERROR_USER_CODE_NOT_FOUND
+            )
+
         list_friend_request_cursor = await list_friend_request_cursor.to_list(None)
+
+        for friend_request in list_friend_request_cursor:
+            print(friend_request['_id'], friend_request['created_time'])
+            user_request = await get_user_by_code(friend_request['user_code_request'])
+            friend_request['user_code_receive'] = user
+            friend_request['user_code_request'] = user_request
+
+        last_friend_request = list_friend_request_cursor[1]
+        print(last_friend_request)
+        last_friend_request_id = last_friend_request['_id']
+        print(type(last_friend_request_id))
+
         response = {
-            "data": list_friend_request_cursor,
+            "data":
+                {
+                    "list_friend_request_info": list_friend_request_cursor,
+                    "last_friend_request_id": last_friend_request_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],

@@ -4,6 +4,7 @@ from typing import List
 from pydantic import BaseModel,  Field
 
 from api.endpoint.user.schema import ResponseUser
+from api.third_parties.database.mongodb import PyObjectId
 
 
 class ResponseNotification(BaseModel):
@@ -20,6 +21,7 @@ class ResponseDeleteNotification(BaseModel):
 
 
 class ResponseNotificationInfo(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     notification_code: str = Field("", example='')
     user_info: ResponseUser
     user_guest_info: ResponseUser
@@ -30,8 +32,9 @@ class ResponseNotificationInfo(BaseModel):
 
 
 class ResponseListNotification(BaseModel):
-    number_noti_not_read: str = Field("0")
+    # number_noti_not_read: str = Field("0")
     list_noti_info: List[ResponseNotificationInfo] = Field(...)
+    last_noti_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_noti_id")
 
 
 class ResponseNumberNotification(BaseModel):

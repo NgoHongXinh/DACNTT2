@@ -7,7 +7,8 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED
 
 from api.base.authorization import get_current_user
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
-    CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_WHEN_UPDATE_CREATE_POST
+    CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_WHEN_UPDATE_CREATE_POST, \
+    CODE_ERROR_USER_CODE_NOT_FOUND
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
     ResponseDeletePost
@@ -41,14 +42,33 @@ logger = logging.getLogger("post.view.py")
 )
 async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
     try:
+        if not user:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
         list_post_cursor = await post_query.get_all_post_by_user_code(
             user_code=user['user_code'],
             last_post_id=last_post_ids
         )
+        if not list_post_cursor:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_USER_CODE_NOT_FOUND)
         list_post_cursor = await list_post_cursor.to_list(None)
 
+        for post in list_post_cursor:
+            print(post['_id'], post['created_time'])
+            user_info = await user_query.get_user_by_code(post['created_by'])
+            post['created_by'] = user_info
+            post['liked_by'] = len(post['liked_by'])
+
+        last_post = list_post_cursor[-1]
+        print(last_post)
+        last_post_id = last_post['_id']
+        print(type(last_post_id))
+
         response = {
-            "data": list_post_cursor,
+            "data":
+                {
+                    "list_post_info": list_post_cursor,
+                    "last_post_id": last_post_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],

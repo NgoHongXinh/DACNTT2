@@ -38,14 +38,30 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
     try:
         if not post_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
-        list_post_cursor = await comment_query.get_all_comment_by_post_code(
+        list_comment_cursor = await comment_query.get_all_comment_by_post_code(
             post_code=post_code,
             last_comment_id=last_comment_ids
         )
-        list_post_cursor = await list_post_cursor.to_list(None)
+        if not list_comment_cursor:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
+        list_comment_cursor = await list_comment_cursor.to_list(None)
+
+        for comment in list_comment_cursor:
+            print(comment['_id'], comment['created_time'])
+            user = await user_query.get_user_by_code(comment['created_by'])
+            comment['created_by'] = user
+
+        last_comment = list_comment_cursor[-1]
+        print(last_comment)
+        last_comment_id = last_comment['_id']
+        print(type(last_comment_id))
 
         response = {
-            "data": list_post_cursor,
+            "data":
+                {
+                    "list_comment_info": list_comment_cursor,
+                    "last_comment_id": last_comment_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -174,7 +190,6 @@ async def create_comment(
                 status_code = HTTP_400_BAD_REQUEST
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
-
             # # Gửi socket notification (nếu online)
 
         response = {

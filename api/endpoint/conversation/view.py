@@ -10,7 +10,7 @@ from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.conversation.schema import ResponseConversation, RequestCreateConversation
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
-    CODE_ERROR_USER_CODE_NOT_FOUND
+    CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, \
     get_all_conversation_of_current_user, create_conversation, get_conversation_by_members
@@ -66,10 +66,28 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
             user_code=user['user_code'],
             last_conversation_id=last_user_ids
         )
+        if not list_conversation_cursor:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_USER_CODE_NOT_FOUND)
         list_conversation_cursor = await list_conversation_cursor.to_list(None)
 
+        for conversation in list_conversation_cursor:
+            print(conversation['_id'], conversation['created_time'])
+            user_to_chat = await get_user_by_code(conversation['members'][1])
+            user = await get_user_by_code(conversation['members'][0])
+            conversation["user_code_to_chat"] = user_to_chat
+            conversation["current_user_code"] = user
+
+        last_conversation = list_conversation_cursor[1]
+        print(last_conversation)
+        last_conversation_id = last_conversation['_id']
+        print(type(last_conversation_id))
+
         response = {
-            "data": list_conversation_cursor,
+            "data":
+                {
+                    "list_conversation_info": list_conversation_cursor,
+                    "last_conversation_id": last_conversation_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -97,17 +115,22 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
 )
 async def create_new_conversation(user_chat: RequestCreateConversation,
                                   user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+
     try:
         receiver_id = user_chat.user_code_to_chat
+        if not receiver_id:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'user_code_to_chat not allow empty'
+            raise HTTPException(status_code)
 
         # Kiểm tra xem user có tồn tại không bằng cách kiểm tra user_code
         receiver = await get_user_by_code(receiver_id)
-
         if not receiver:
-            return http_exception(
-                status_code=HTTP_400_BAD_REQUEST,
-                message=f"User with user_code {receiver_id} does not exist."
-            )
+            status_code = HTTP_400_BAD_REQUEST
+            message = f"User with user_code {receiver_id} does not exist."
+            raise HTTPException(status_code)
 
         # Kiểm tra xem conversation đã tồn tại chưa nếu có thì trả về conversation đó
         existing_conversation = await get_conversation_by_members([user['user_code'], receiver_id])
@@ -126,6 +149,11 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
             conversation_code=str(uuid.uuid4())
         )
         conversation = await create_conversation(conversation_data)
+        if not conversation:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION
+            raise HTTPException(status_code)
+
         response = {
             "data": conversation,
             "response_status": {
@@ -135,9 +163,10 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
         }
         return SuccessResponse[ResponseConversation](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
