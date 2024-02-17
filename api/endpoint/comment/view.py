@@ -7,7 +7,8 @@ from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment, ResponseDeleteComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
-    CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND
+    CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
+    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
@@ -71,10 +72,16 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
     )
 )
 async def get_a_comment(comment_code: str):
+    code = message = status_code = ''
     try:
         if not comment_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
         comment = await comment_query.get_comment_by_comment_code(comment_code)
+        if not comment:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
+            message = 'get_comment_by_comment_code error, comment not found'
+            raise HTTPException(status_code)
         response = {
             "data": comment,
             "response_status": {
@@ -85,10 +92,11 @@ async def get_a_comment(comment_code: str):
         print(response)
         return SuccessResponse[ResponseComment](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -120,7 +128,7 @@ async def create_comment(
 
         if image_upload:
             data_image_byte = await image_upload.read()
-            info_image_upload = await upload_image_cloud(data_image_byte, user['user_code'])
+            info_image_upload = await upload_image_comment_cloud(data_image_byte, user['user_code'])
             image_id += info_image_upload['public_id']
             image += info_image_upload['url']
 
@@ -133,7 +141,15 @@ async def create_comment(
             post_code=post_code
         )
         new_comment_id = await comment_query.create_comment(comment_data)
+        if not new_comment_id:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
+            raise HTTPException(status_code)
         new_comment = await comment_query.get_comment_by_id(new_comment_id)
+        if not new_comment:
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'get_comment_by_id error, comment_id not found'
+            raise HTTPException(status_code)
         new_comment['created_by'] = user
 
         await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
@@ -155,7 +171,9 @@ async def create_comment(
             )  # Tạo thông báo
             new_noti = await notification_query.create_noti(notification)
             if not new_noti:
-                logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+                status_code = HTTP_400_BAD_REQUEST
+                code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
+                raise HTTPException(status_code)
 
             # # Gửi socket notification (nếu online)
 
@@ -170,7 +188,7 @@ async def create_comment(
         return SuccessResponse[ResponseCreateUpdateComment](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -189,20 +207,25 @@ async def create_comment(
     )
 )
 async def delete_comment(comment_code: str):
+    code = message = status_code = ''
     try:
         if not comment_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code not allow empty')
 
         comment = await comment_query.get_comment_by_comment_code(comment_code)
         if not comment:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_COMMENT_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
+            raise HTTPException(status_code)
         else:
             for image_id in comment.get("image_id", []):
                 await delete_image(image_id)
 
         deleted = await comment_query.delete_comment(comment_code)
         if not deleted:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='Failed comment delete')
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'delete comment error'
+            raise HTTPException(status_code)
 
         return SuccessResponse[ResponseDeleteComment](**{
             "data": {"message": "delete comment success"},
@@ -212,10 +235,11 @@ async def delete_comment(comment_code: str):
             }
         })
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -237,6 +261,7 @@ async def update_comment(
         image_upload: UploadFile = File(None)
 
 ):
+    code = message = status_code = ''
     try:
         if not comment_code and not content and not image_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code, content, image upload '
@@ -246,7 +271,9 @@ async def update_comment(
 
         comment_update = await comment_query.get_comment_by_comment_code(comment_code)
         if not comment_update:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_COMMENT_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
+            raise HTTPException(status_code)
 
         list_image_need_delete_in_cloud = comment_update['image_id']
 
@@ -266,6 +293,11 @@ async def update_comment(
         print(comment_update)
 
         new_comment = await comment_query.update_comment(comment_code, comment_update)
+        if not new_comment:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
+            raise HTTPException(status_code)
+
         new_comment['created_by'] = user
 
         response = {
@@ -278,8 +310,9 @@ async def update_comment(
 
         return SuccessResponse[ResponseCreateUpdateComment](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )

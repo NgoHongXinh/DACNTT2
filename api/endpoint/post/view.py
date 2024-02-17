@@ -7,7 +7,7 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED
 
 from api.base.authorization import get_current_user
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
-    CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
+    CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_WHEN_UPDATE_CREATE_POST
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
     ResponseDeletePost
@@ -26,42 +26,6 @@ from settings.init_project import open_api_standard_responses, http_exception
 router = APIRouter()
 
 logger = logging.getLogger("post.view.py")
-
-
-@router.get(
-    path=f"/posts",
-    name="get_all_post",
-    description="get all post of user",
-    status_code=HTTP_200_OK,
-    responses=open_api_standard_responses(
-        success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponsePost]],
-        fail_response_model=FailResponse[ResponseStatus]
-    )
-)
-async def get_posts(user: dict = Depends(get_current_user)):
-    try:
-        posts = await post_query.get_all_post_by_user_code(user['user_code'])
-        for post in posts:
-            post['is_liked'] = False
-            if user['user_code'] in post['liked_by']:  # kiểm tra chủ bài dăng đã like hay chưa
-                post['is_liked'] = True
-
-        response = {
-            "data": posts,
-            "response_status": {
-                "code": CODE_SUCCESS,
-                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-            }
-        }
-        return SuccessResponse[List[ResponsePost]](**response)
-
-    except:
-        logger.error(exc_info=True)
-        return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
-        )
 
 
 @router.get(
@@ -111,10 +75,17 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
     )
 )
 async def get_post(post_code: str):
+    code = message = status_code = ''
+
     try:
+        if not post_code:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            message = 'get_comment_by_comment_code error, comment not found'
+            raise HTTPException(status_code)
 
         response = {
             "data": post,
@@ -126,10 +97,11 @@ async def get_post(post_code: str):
         return SuccessResponse[ResponsePost](**response)
 
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -150,14 +122,20 @@ async def create_post(
         video_upload: UploadFile = File(None),
         user: dict = Depends(get_current_user)
 ):
+    code = message = status_code = ''
+
     try:
         if not content and not images_upload and not video_upload:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_INPUT,
-                                  message='content, image, video not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            message = "content, image, video not allow empty"
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
+
         if images_upload and len(images_upload) > 4:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST,
-                                  code=CODE_ERROR_INPUT,
-                                  message='Maximum image number is 4')
+            status_code = HTTP_400_BAD_REQUEST
+            message = "Maximum image number is 4"
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
 
         image_ids = []
         video_ids = ""
@@ -188,7 +166,16 @@ async def create_post(
         )
 
         new_post_id = await post_query.create_post(post_data)
+        if not new_post_id:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_POST
+            raise HTTPException(status_code)
+
         new_post = await get_post_by_id(new_post_id)
+        if not new_post:
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'get_post_by_id error, new_post_id not found'
+            raise HTTPException(status_code)
         new_post['created_by'] = user
 
         response = {
@@ -201,10 +188,11 @@ async def create_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -220,12 +208,17 @@ async def create_post(
     )
 )
 async def delete_post(post_code: str):
+    code = message = status_code = ''
+
     try:
         if not post_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
         post = await post_query.get_post_by_post_code(post_code)  # lấy thông tin bài viết
         if not post:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+
         else:
             await comment_query.delete_comments_by_post(post_code)  # xóa tất cả comment của bài viết
             for image_id in post.get("image_ids", []):  # xóa tất cả ảnh của bài viết
@@ -234,7 +227,10 @@ async def delete_post(post_code: str):
                 await delete_image(video_id)
         deleted = await post_query.delete_post(post_code) # xóa bài viết
         if not deleted:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='Failed post delete')
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'Failed post delete'
+            raise HTTPException(status_code)
+
         return SuccessResponse[ResponseDeletePost](**{
             "data": {"message": "delete post success"},
             "response_status": {
@@ -244,10 +240,11 @@ async def delete_post(post_code: str):
         })
 
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -270,6 +267,8 @@ async def update_post(
         user: dict = Depends(get_current_user)
 
 ):
+    code = message = status_code = ''
+
     try:
         if not content and not images_upload and not video_upload:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
@@ -280,7 +279,10 @@ async def update_post(
 
         post_need_update = await get_post_by_post_code(post_code)
         if not post_need_update:
-            return http_exception(HTTP_400_BAD_REQUEST, CODE_ERROR_POST_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+
         list_image_need_delete_incloud = post_need_update['image_ids']
         list_video_need_delete_incloud = post_need_update['video_ids']
         if images_upload:
@@ -310,6 +312,11 @@ async def update_post(
             post_need_update['content'] = content
 
         post_update = await post_query.update_post(post_code, post_need_update)
+        if not post_update:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_POST
+            raise HTTPException(status_code)
+
         post_update['created_by'] = user
 
         response = {
@@ -322,10 +329,11 @@ async def update_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
