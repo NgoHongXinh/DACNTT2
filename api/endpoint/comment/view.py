@@ -103,17 +103,16 @@ async def create_comment(
         post = await post_query.get_post_by_post_code(post_code)
 
         # Kiểm tra xem có phải chủ bài viết comment hay không
-        # if user['user_code'] != post['created_by']:
-        #     # Tạo notification
-        #     notification = Notification(
-        #         notification_code=str(uuid.uuid4()),
-        #         user_code=post['created_by'],
-        #         user_code_guest=user['user_code'],
-        #         content=f"{user['fullname']} đã bình luận bài viết của bạn"
-        #     )
-        #     new_noti = await notification_query.create_noti(notification)
-        #     if not new_noti:
-        #         logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+        if user['user_code'] != post['created_by']:
+            notification = Notification(
+                notification_code=str(uuid.uuid4()),
+                user_code=post['created_by'],
+                user_code_guest=user['user_code'],
+                content=f"{user['fullname']} đã bình luận bài viết của bạn"
+            )  # Tạo thông báo
+            new_noti = await notification_query.create_noti(notification)
+            if not new_noti:
+                logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
 
             # # Gửi socket notification (nếu online)
 

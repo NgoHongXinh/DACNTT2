@@ -1,13 +1,13 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.notification.schema import ResponseNotification, ResponseListNotification, ResponseNumberNotification
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND, \
-    CODE_ERROR_SERVER, CODE_ERROR_INPUT
+    CODE_ERROR_SERVER
 from api.third_parties.database.query import notification as query_notification
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
@@ -40,16 +40,21 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
         if not notifications:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND)
         list_notifications_cursor = await notifications.to_list(None)
-        print(list_notifications_cursor)
+
 
         for noti in list_notifications_cursor:
+            print(noti['_id'], noti['created_time'])
             user_guest = await get_user_by_code(noti['user_code_guest'])
             noti["user_info"] = user
             noti["user_guest_info"] = user_guest
-
+        lat_noti = list_notifications_cursor[-1]
+        print(lat_noti)
+        last_noti_id = lat_noti['_id']
+        print(type(last_noti_id))
         response = {
             "data": {
-                "list_noti_info": list_notifications_cursor
+                "list_noti_info": list_notifications_cursor,
+                "last_noti_id": last_noti_id
 
             },
             "response_status": {
@@ -57,7 +62,7 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        print(response)
+
         return SuccessResponse[ResponseListNotification](**response)
     except:
         logger.error(exc_info=True)
