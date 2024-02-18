@@ -4,7 +4,7 @@ from pymongo import ReturnDocument
 
 from api.third_parties.database.model.post import Post
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
-from api.third_parties.database.query.paging import paging_sort_by_create_time
+from api.third_parties.database.query.paging import paging_sort_by_create_time, paging
 
 
 async def get_all_post_by_user_code(user_code: str, last_post_id=""):
@@ -12,12 +12,12 @@ async def get_all_post_by_user_code(user_code: str, last_post_id=""):
     # cursor = db['post'].find({"created_by": user_code})
     # posts = await cursor.to_list(None)
     # return posts
-    list_post_cursor = await paging_sort_by_create_time(
+    list_post_cursor = await paging(
         query_param_for_paging=last_post_id,
         database_name="post",
         query_condition={"created_by": user_code},
         db=db,
-        sort=1)
+        sort=-1)
     return list_post_cursor
 
 

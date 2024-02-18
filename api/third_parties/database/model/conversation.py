@@ -8,7 +8,7 @@ class Conversation(BaseModel):
     def __init__(self, conversation_code=None, members=[]):
         super().__init__()
         self.conversation_code = conversation_code
-        self.members = members
+        self.members = members  # list of user_code
 
     def to_json(self):
         data = self.__dict__

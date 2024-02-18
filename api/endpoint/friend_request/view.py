@@ -43,12 +43,36 @@ router = APIRouter()
 )
 async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict = Depends(get_current_user)):
     try:
+        if not user:
+            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
         list_friend_request_cursor = await get_all_friend_request(
             user_code=user['user_code'],
             last_friend_request_id=last_user_ids)
+        if not list_friend_request_cursor:
+            return http_exception(
+                status_code=HTTP_400_BAD_REQUEST,
+                code=CODE_ERROR_USER_CODE_NOT_FOUND
+            )
+
         list_friend_request_cursor = await list_friend_request_cursor.to_list(None)
+
+        for friend_request in list_friend_request_cursor:
+            print(friend_request['_id'], friend_request['created_time'])
+            user_request = await get_user_by_code(friend_request['user_code_request'])
+            friend_request['user_code_receive'] = user
+            friend_request['user_code_request'] = user_request
+
+        last_friend_request = list_friend_request_cursor[1]
+        print(last_friend_request)
+        last_friend_request_id = last_friend_request['_id']
+        print(type(last_friend_request_id))
+
         response = {
-            "data": list_friend_request_cursor,
+            "data":
+                {
+                    "list_friend_request_info": list_friend_request_cursor,
+                    "last_friend_request_id": last_friend_request_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -65,7 +89,7 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
 
 @router.post(
     path="/friend-request/{user_code_want_request}",
-    name="request_new_frient",
+    name="request_new_friend",
     description="send request friend to new people",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
@@ -116,7 +140,6 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 user_code=user_code_want_request,
                 user_code_guest=user['user_code'],
                 content='đã gửi lời mời kết bạn',
-
             )
             new_noti = await create_noti(notification)
             if not new_noti:
@@ -124,7 +147,7 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
             return SuccessResponse[ResponseCreateFriendRequest](**{
-                "data": {"message":"Send request success"},
+                "data": {"message": "Send request success"},
                 "response_status": {
                     "code": CODE_SUCCESS,
                     "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -296,11 +319,11 @@ async def get_all_friend_of_user(
         # kiểm tra xem danh sách bạn bè của người đó có ai là bạn với mình hay đã gửi lời mời ...
         if user_code != user['user_code']:
             for index, friend in enumerate(get_friend_of_user):
-                # nếu nguowfi đang onle là bạn bè của user_code đang cần tìm thì bỏ qua vì đã kiểm tra ở bên user rồi
+                # nếu nguoi đang online là bạn bè của user_code đang cần tìm thì bỏ qua vì đã kiểm tra ở bên user rồi
                 if user['user_code'] == friend['user_code']:
                     get_friend_of_user.pop(index)
                     break
-            for index, friend in enumerate(get_friend_of_user):
+            for index, friend in enumerate(get_friend_of_user):  # kiểm tra xem user đang onl có phải là bạn bè của người khác không
                 get_friend_of_user[index]['friend_status'] = await check_friend_or_not_in_profile(
                     current_user=user['user_code'],
                     user_code_check=friend['user_code'],

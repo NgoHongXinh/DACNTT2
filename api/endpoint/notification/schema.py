@@ -16,6 +16,10 @@ class ResponseNotification(BaseModel):
     deleted_flag: bool = Field("", example=False)
 
 
+class ResponseDeleteNotification(BaseModel):
+    message: str = Field("")
+
+
 class ResponseNotificationInfo(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     notification_code: str = Field("", example='')
@@ -31,6 +35,7 @@ class ResponseListNotification(BaseModel):
     # number_noti_not_read: str = Field("0")
     list_noti_info: List[ResponseNotificationInfo] = Field(...)
     last_noti_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_noti_id")
+
 
 class ResponseNumberNotification(BaseModel):
     number_noti_not_read: str = Field("0")

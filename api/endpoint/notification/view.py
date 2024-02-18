@@ -1,13 +1,18 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.notification.schema import ResponseNotification, ResponseListNotification, ResponseNumberNotification
-from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND, \
-    CODE_ERROR_SERVER
+
+
+from api.endpoint.notification.schema import (ResponseNotification, ResponseListNotification,
+                                              ResponseNumberNotification, ResponseDeleteNotification)
+from api.library.constant import (CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND,
+                                  CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI)
+
+
 from api.third_parties.database.query import notification as query_notification
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
@@ -41,16 +46,17 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND)
         list_notifications_cursor = await notifications.to_list(None)
 
-
         for noti in list_notifications_cursor:
             print(noti['_id'], noti['created_time'])
             user_guest = await get_user_by_code(noti['user_code_guest'])
             noti["user_info"] = user
             noti["user_guest_info"] = user_guest
-        lat_noti = list_notifications_cursor[-1]
-        print(lat_noti)
-        last_noti_id = lat_noti['_id']
+
+        last_noti = list_notifications_cursor[-1]
+        print(last_noti)
+        last_noti_id = last_noti['_id']
         print(type(last_noti_id))
+
         response = {
             "data": {
                 "list_noti_info": list_notifications_cursor,
@@ -79,11 +85,13 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[ResponseNotification],
+        success_response_model=SuccessResponse[ResponseDeleteNotification],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
 async def delete_notification(notification_code: str, user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+
     try:
         if not notification_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND)
@@ -92,14 +100,23 @@ async def delete_notification(notification_code: str, user: dict = Depends(get_c
             user['user_code']
         )
         if not deleted:
-            return {"message": "Failed notification delete"}
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'Failed notification delete'
+            raise HTTPException(status_code)
 
-        return deleted
+        return SuccessResponse[ResponseDeleteNotification](**{
+            "data": {"message": "thông báo đã được ẩn đi"},
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        })
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -115,13 +132,19 @@ async def delete_notification(notification_code: str, user: dict = Depends(get_c
     )
 )
 async def update_notification(notification_code: str, user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+
     try:
         updated = await query_notification.update_notification(
             notification_code,
             user['user_code']
         )
         if not updated:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND)
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'update_notification failed'
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
+            raise HTTPException(status_code)
+
         response = {
             "data": updated,
             "response_status": {
@@ -132,10 +155,11 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
 
         return SuccessResponse[ResponseNotification](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 @router.get(

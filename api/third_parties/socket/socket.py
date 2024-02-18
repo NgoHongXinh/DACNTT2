@@ -16,6 +16,7 @@ sio_app = socketio.ASGIApp(
     socketio_path='socket.io'
 )
 
+
 @sio_server.event
 async def connect(sid, environ, auth):
     print("connect")
@@ -33,6 +34,7 @@ async def change_status_user_online(sid):
     print(f'{sid}: disconnected')
     await disconnect_user_online_socketid(socket_id=sid)
 
+
 @sio_server.on("new_user_connect")
 async def new_user(sid, user_code):
     print(user_code, sid)
@@ -43,12 +45,12 @@ async def new_user(sid, user_code):
     else:
         await update_user_online(user_code=user_code, data_update={"socket_id": sid, "status": True})
 
+
 @sio_server.on("join_room")
 async def join_room(sid, data):
-    print("da taoj room", data, sid)
+    print("da tao room", data, sid)
     # sio_server.enter_room(sid, 'chat_users')
     sio_server.enter_room(sid, data['room_name'])
-
 
 
 @sio_server.event
