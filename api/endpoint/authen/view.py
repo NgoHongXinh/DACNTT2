@@ -44,8 +44,7 @@ async def get_token(user: OAuth2PasswordRequestForm = Depends()):
     token = await create_access_token(user_login['user_code'])
 
     return ResponseToken(
-        **{"access_token": token,
-           "user_info": user_login}
+        **{"access_token": token}
     )
 
 
@@ -103,9 +102,11 @@ async def get_token_google(info_token: RequestInfoToken):
         # Tạo JWT token
         access_token = await create_access_token(user['user_code'])
         print("token: " + access_token)
+        print(ResponseToken(
+            **{"access_token": access_token}
+        ))
         return ResponseToken(
-            **{"access_token": access_token,
-               "user_info": user}
+            **{"access_token": access_token}
         )
 
     else:

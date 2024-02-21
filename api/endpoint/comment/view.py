@@ -1,15 +1,19 @@
 import uuid
 import logging
 from typing import List
+
+from bson import ObjectId
 from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment, ResponseDeleteComment
+from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateComment, ResponseDeleteComment, \
+    ResponseListComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
     CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
+from api.third_parties.database.mongodb import PyObjectId
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
@@ -30,7 +34,7 @@ router = APIRouter()
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponseComment]],
+        success_response_model=SuccessResponse[ResponseListComment],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -47,14 +51,15 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
         list_comment_cursor = await list_comment_cursor.to_list(None)
 
         for comment in list_comment_cursor:
-            print(comment['_id'], comment['created_time'])
             user = await user_query.get_user_by_code(comment['created_by'])
             comment['created_by'] = user
 
-        last_comment = list_comment_cursor[-1]
-        print(last_comment)
-        last_comment_id = last_comment['_id']
-        print(type(last_comment_id))
+        last_comment_id = ObjectId("                        ") #  24-character hex string để mặc đinh nếu kO pyobjetc sẽ ko parse được
+        if list_comment_cursor:
+            last_comment = list_comment_cursor[-1]
+            print(last_comment)
+            last_comment_id = last_comment['_id']
+            print(type(last_comment_id))
 
         response = {
             "data":
@@ -67,7 +72,7 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        return SuccessResponse[List[ResponseComment]](**response)
+        return SuccessResponse[ResponseListComment](**response)
     except:
         logger.error(exc_info=True)
         return http_exception(

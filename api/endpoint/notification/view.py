@@ -1,6 +1,7 @@
 
 import logging
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, Query, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -51,11 +52,10 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
             user_guest = await get_user_by_code(noti['user_code_guest'])
             noti["user_info"] = user
             noti["user_guest_info"] = user_guest
-
-        last_noti = list_notifications_cursor[-1]
-        print(last_noti)
-        last_noti_id = last_noti['_id']
-        print(type(last_noti_id))
+        last_noti_id = ObjectId("                        ")
+        if list_notifications_cursor:
+            last_noti = list_notifications_cursor[-1]
+            last_noti_id = last_noti['_id']
 
         response = {
             "data": {
