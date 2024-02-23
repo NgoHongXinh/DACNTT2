@@ -128,7 +128,7 @@ async def get_a_comment(comment_code: str):
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_201_CREATED,
-        success_response_model=SuccessResponse[ResponseCreateUpdateComment],
+        success_response_model=SuccessResponse[ResponseComment],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -205,7 +205,7 @@ async def create_comment(
             }
         }
         print(response)
-        return SuccessResponse[ResponseCreateUpdateComment](**response)
+        return SuccessResponse[ResponseComment](**response)
 
     except:
         logger.error(message, exc_info=True)
