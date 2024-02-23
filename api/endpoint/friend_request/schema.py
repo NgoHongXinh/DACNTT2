@@ -36,3 +36,8 @@ class ResponseFriendOfUser(BaseModel):
                                 <br> not_friend: không phải bản, ko có lời mời
                                 '''
                                 )
+
+
+class ResponseListFriend(BaseModel):
+    list_friend_request_info: List[ResponseFriendOfUser] = Field(...)
+    last_friend_request_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_friend_request_id")

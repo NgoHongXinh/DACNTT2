@@ -3,11 +3,12 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from api.endpoint.user.schema import ResponseUser
+from api.third_parties.database.mongodb import PyObjectId
 
 
 class ResponsePost(BaseModel):
     post_code: str = Field("", example='')
-    created_by: str = Field("", example='')
+    created_by: ResponseUser = Field()
     content: str = Field("", example='')
     images: List[str] = Field([], example=[''])
     images_id: List[str] = Field([], example=[''])
@@ -48,3 +49,9 @@ class ResponseLikePost(BaseModel):
 
 class ResponseSharePost(BaseModel):
     message: str = Field("")
+
+
+class ResponseListPost(BaseModel):
+    list_post_info: List[ResponsePost] = Field(...)
+
+    last_post_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_post_id")

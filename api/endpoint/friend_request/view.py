@@ -2,12 +2,14 @@ import uuid
 import logging
 from typing import List, Union
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.friend_request.schema import ResponseFriendRequest, ResponseCreateFriendRequest, ResponseFriendOfUser
+from api.endpoint.friend_request.schema import ResponseFriendRequest, ResponseCreateFriendRequest, ResponseFriendOfUser, \
+    ResponseListFriend
 from api.library.constant import CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
     CODE_ERROR_WHEN_UPDATE_CREATE, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, \
     CODE_ERROR_WHEN_UPDATE_CREATE_FRIEND_REQUEST, CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, \
@@ -36,7 +38,7 @@ router = APIRouter()
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponseFriendRequest]],
+        success_response_model=SuccessResponse[ResponseListFriend],
         fail_response_model=FailResponse[ResponseStatus]
     )
 
@@ -62,10 +64,12 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
             friend_request['user_code_receive'] = user
             friend_request['user_code_request'] = user_request
 
-        last_friend_request = list_friend_request_cursor[1]
-        print(last_friend_request)
-        last_friend_request_id = last_friend_request['_id']
-        print(type(last_friend_request_id))
+        last_friend_request_id = ObjectId("                        ")
+        if list_friend_request_cursor:
+            last_friend_request = list_friend_request_cursor[1]
+            print(last_friend_request)
+            last_friend_request_id = last_friend_request['_id']
+            print(type(last_friend_request_id))
 
         response = {
             "data":
@@ -78,7 +82,7 @@ async def get_friend_requests(last_user_ids: str = Query(default=""), user: dict
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        return SuccessResponse[List[ResponseFriendRequest]](**response)
+        return SuccessResponse[ResponseListFriend](**response)
     except:
         logger.error(exc_info=True)
         return http_exception(
