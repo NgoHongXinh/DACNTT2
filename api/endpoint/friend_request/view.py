@@ -249,7 +249,7 @@ async def accept_friend(
             }
         return SuccessResponse[List[ResponseFriendRequest]](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -286,7 +286,7 @@ async def deny_friend(user_request_code: str, user: dict = Depends(get_current_u
             }
         })
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -342,7 +342,7 @@ async def get_all_friend_of_user(
         return SuccessResponse[List[ResponseFriendOfUser]](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -389,7 +389,7 @@ async def delete_friend(
         })
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,

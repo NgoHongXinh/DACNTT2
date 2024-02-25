@@ -11,9 +11,9 @@ from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateCom
     ResponseListComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
-    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
-from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
-from api.third_parties.database.mongodb import PyObjectId
+    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_USER_CODE_NOT_FOUND, \
+    CODE_ERROR_WHEN_UPDATE_CREATE_POST
+from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
@@ -23,7 +23,6 @@ from api.third_parties.database.query import notification as notification_query
 from api.third_parties.database.model.notification import Notification
 
 logger = logging.getLogger("comment.view.py")
-
 router = APIRouter()
 
 
@@ -39,15 +38,19 @@ router = APIRouter()
     )
 )
 async def get_all_comment(post_code: str, last_comment_ids: str = Query(default="")):
+    code = message = status_code = ''
+
     try:
         if not post_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "post_code not allow empty"
+            raise HTTPException(status_code)
+
         list_comment_cursor = await comment_query.get_all_comment_by_post_code(
             post_code=post_code,
             last_comment_id=last_comment_ids
         )
-        if not list_comment_cursor:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_POST_CODE_NOT_FOUND)
         list_comment_cursor = await list_comment_cursor.to_list(None)
 
         for comment in list_comment_cursor:
@@ -57,9 +60,7 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
         last_comment_id = ObjectId("                        ") #  24-character hex string để mặc đinh nếu kO pyobjetc sẽ ko parse được
         if list_comment_cursor:
             last_comment = list_comment_cursor[-1]
-            print(last_comment)
             last_comment_id = last_comment['_id']
-            print(type(last_comment_id))
 
         response = {
             "data":
@@ -74,46 +75,7 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
         }
         return SuccessResponse[ResponseListComment](**response)
     except:
-        logger.error(exc_info=True)
-        return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
-        )
-
-
-@router.get(
-    path="/post/{post_code}/comment/{comment_code}",
-    name="get_comment",
-    description="get a comment of post",
-    status_code=HTTP_200_OK,
-    responses=open_api_standard_responses(
-        success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[ResponseComment],
-        fail_response_model=FailResponse[ResponseStatus]
-    )
-)
-async def get_a_comment(comment_code: str):
-    code = message = status_code = ''
-    try:
-        if not comment_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
-        comment = await comment_query.get_comment_by_comment_code(comment_code)
-        if not comment:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
-            message = 'get_comment_by_comment_code error, comment not found'
-            raise HTTPException(status_code)
-        response = {
-            "data": comment,
-            "response_status": {
-                "code": CODE_SUCCESS,
-                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-            }
-        }
-        print(response)
-        return SuccessResponse[ResponseComment](**response)
-    except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -141,8 +103,16 @@ async def create_comment(
     status_code = code = message = ""
 
     try:
-        if not content and not image_upload:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image upload not allow empty')
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            message = "User code not found"
+            raise HTTPException(status_code)
+        if not content and not image_upload and not post_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "content or image_upload or post_code not allow empty"
+            raise HTTPException(status_code)
 
         image_id = ""
         image = ""
@@ -169,12 +139,14 @@ async def create_comment(
         new_comment = await comment_query.get_comment_by_id(new_comment_id)
         if not new_comment:
             status_code = HTTP_400_BAD_REQUEST
-            message = 'get_comment_by_id error, comment_id not found'
+            code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
             raise HTTPException(status_code)
         new_comment['created_by'] = user
-
-        await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
-
+        push_comment = await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
+        if not push_comment:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_POST
+            raise HTTPException(status_code)
         # Lấy thông tin bài viết
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
@@ -204,16 +176,16 @@ async def create_comment(
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        print(response)
         return SuccessResponse[ResponseComment](**response)
 
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
             message=message
         )
+
 
 @router.delete(
     path="/post/{post_code}/comment/{comment_code}",
@@ -230,7 +202,10 @@ async def delete_comment(comment_code: str):
     code = message = status_code = ''
     try:
         if not comment_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "comment_code not allow empty"
+            raise HTTPException(status_code)
 
         comment = await comment_query.get_comment_by_comment_code(comment_code)
         if not comment:
@@ -244,7 +219,7 @@ async def delete_comment(comment_code: str):
         deleted = await comment_query.delete_comment(comment_code)
         if not deleted:
             status_code = HTTP_400_BAD_REQUEST
-            message = 'delete comment error'
+            code = CODE_ERROR_WHEN_DELETE_COMMENT
             raise HTTPException(status_code)
 
         return SuccessResponse[ResponseDeleteComment](**{
@@ -255,7 +230,7 @@ async def delete_comment(comment_code: str):
             }
         })
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -283,9 +258,15 @@ async def update_comment(
 ):
     code = message = status_code = ''
     try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            raise HTTPException(status_code)
         if not comment_code and not content and not image_upload:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='comment_code, content, image upload '
-                                                                            'not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "comment_code or content or image_upload not allow empty"
+            raise HTTPException(status_code)
         image_id = ""
         image = ""
 
@@ -305,12 +286,10 @@ async def update_comment(
             comment_update['image_id'] = image_id
             comment_update['image'] = image
             for image_ids in list_image_need_delete_in_cloud:
-                print(image_ids)
                 await delete_image(image_ids)
 
         if content:
             comment_update['content'] = content
-        print(comment_update)
 
         new_comment = await comment_query.update_comment(comment_code, comment_update)
         if not new_comment:
@@ -330,7 +309,7 @@ async def update_comment(
 
         return SuccessResponse[ResponseCreateUpdateComment](**response)
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,

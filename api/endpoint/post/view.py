@@ -9,7 +9,7 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED
 from api.base.authorization import get_current_user
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_POST_CODE_NOT_FOUND, CODE_ERROR_INPUT, \
     CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_WHEN_UPDATE_CREATE_POST, \
-    CODE_ERROR_USER_CODE_NOT_FOUND
+    CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_DELETE_POST
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
     ResponseDeletePost, ResponseListPost
@@ -42,19 +42,22 @@ logger = logging.getLogger("post.view.py")
     )
 )
 async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
+    code = message = status_code = ''
+
     try:
         if not user:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            message = "user not allow empty"
+            raise HTTPException(status_code)
         list_post_cursor = await post_query.get_all_post_by_user_code(
             user_code=user['user_code'],
             last_post_id=last_post_ids
         )
-        if not list_post_cursor:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, code=CODE_ERROR_USER_CODE_NOT_FOUND)
+
         list_post_cursor = await list_post_cursor.to_list(None)
 
         for post in list_post_cursor:
-            print(post['_id'], post['created_time'])
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
             post['liked_by'] = list(post['liked_by'])
@@ -79,10 +82,11 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
         }
         return SuccessResponse[ResponseListPost](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -102,12 +106,15 @@ async def get_post(post_code: str):
 
     try:
         if not post_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            message = "post_code not allow empty"
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
+
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_POST_CODE_NOT_FOUND
-            message = 'get_comment_by_comment_code error, comment not found'
             raise HTTPException(status_code)
 
         response = {
@@ -120,7 +127,7 @@ async def get_post(post_code: str):
         return SuccessResponse[ResponsePost](**response)
 
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -148,6 +155,12 @@ async def create_post(
     code = message = status_code = ''
 
     try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            message = "user not allow empty"
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            raise HTTPException(status_code)
+
         if not content and not images_upload and not video_upload:
             status_code = HTTP_400_BAD_REQUEST
             message = "content, image, video not allow empty"
@@ -197,7 +210,8 @@ async def create_post(
         new_post = await get_post_by_id(new_post_id)
         if not new_post:
             status_code = HTTP_400_BAD_REQUEST
-            message = 'get_post_by_id error, new_post_id not found'
+            code = CODE_ERROR_POST_CODE_NOT_FOUND
+            message = 'Got error when get new post info after create post'
             raise HTTPException(status_code)
         new_post['created_by'] = user
 
@@ -211,7 +225,7 @@ async def create_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -235,7 +249,10 @@ async def delete_post(post_code: str):
 
     try:
         if not post_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='post_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            message = "post_code not allow empty"
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
         post = await post_query.get_post_by_post_code(post_code)  # lấy thông tin bài viết
         if not post:
             status_code = HTTP_400_BAD_REQUEST
@@ -251,7 +268,7 @@ async def delete_post(post_code: str):
         deleted = await post_query.delete_post(post_code) # xóa bài viết
         if not deleted:
             status_code = HTTP_400_BAD_REQUEST
-            message = 'Failed post delete'
+            code = CODE_ERROR_WHEN_DELETE_POST
             raise HTTPException(status_code)
 
         return SuccessResponse[ResponseDeletePost](**{
@@ -263,7 +280,7 @@ async def delete_post(post_code: str):
         })
 
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -293,8 +310,17 @@ async def update_post(
     code = message = status_code = ''
 
     try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            message = "user not allow empty"
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            raise HTTPException(status_code)
         if not content and not images_upload and not video_upload:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='content, image, video not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            message = "content, image, video not allow empty"
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
+
         image_ids = []
         video_ids = ""
         videos = ""
@@ -352,7 +378,7 @@ async def update_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -374,6 +400,17 @@ async def update_post(
 async def like_post(post_code: str, user: dict = Depends(get_current_user)):
     status_code = code = message = ""
     try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            message = "user not allow empty"
+            raise HTTPException(status_code)
+        if not post_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'post_code not allow empty'
+            raise HTTPException(status_code)
+
         post = await get_post_by_post_code(post_code)
         if not post:
             status_code = HTTP_400_BAD_REQUEST
@@ -417,7 +454,7 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
         }
         return SuccessResponse[ResponseLikePost](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -439,6 +476,16 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
 async def create_share_post(post_code: str, user: dict = Depends(get_current_user)):
     status_code = code = message = ""
     try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            message = "user not allow empty"
+            raise HTTPException(status_code)
+        if not post_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'post_code not allow empty'
+            raise HTTPException(status_code)
         post = await get_post_by_post_code(post_code)
         if not post:
             status_code = HTTP_400_BAD_REQUEST
@@ -489,7 +536,7 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
         return SuccessResponse[ResponseSharePost](**response),
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
