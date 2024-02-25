@@ -13,8 +13,7 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
     CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_USER_CODE_NOT_FOUND, \
     CODE_ERROR_WHEN_UPDATE_CREATE_POST
-from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image, upload_image_cloud
-from api.third_parties.database.mongodb import PyObjectId
+from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
@@ -24,7 +23,6 @@ from api.third_parties.database.query import notification as notification_query
 from api.third_parties.database.model.notification import Notification
 
 logger = logging.getLogger("comment.view.py")
-
 router = APIRouter()
 
 
@@ -77,7 +75,7 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
         }
         return SuccessResponse[ResponseListComment](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -144,7 +142,6 @@ async def create_comment(
             code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
             raise HTTPException(status_code)
         new_comment['created_by'] = user
-
         push_comment = await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
         if not push_comment:
             status_code = HTTP_400_BAD_REQUEST
@@ -182,7 +179,7 @@ async def create_comment(
         return SuccessResponse[ResponseComment](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -233,7 +230,7 @@ async def delete_comment(comment_code: str):
             }
         })
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -312,7 +309,7 @@ async def update_comment(
 
         return SuccessResponse[ResponseCreateUpdateComment](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,

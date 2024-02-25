@@ -77,7 +77,7 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
         }
         return SuccessResponse[List[ResponsePost]](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -122,7 +122,7 @@ async def get_post(post_code: str):
         return SuccessResponse[ResponsePost](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -220,7 +220,7 @@ async def create_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -275,7 +275,7 @@ async def delete_post(post_code: str):
         })
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -373,7 +373,7 @@ async def update_post(
         return SuccessResponse[ResponseCreateUpdatePost](**response)
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -449,7 +449,7 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
         }
         return SuccessResponse[ResponseLikePost](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -531,7 +531,7 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
         return SuccessResponse[ResponseSharePost](**response),
 
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,

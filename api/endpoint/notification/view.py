@@ -73,7 +73,7 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
 
         return SuccessResponse[ResponseListNotification](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -119,7 +119,7 @@ async def delete_notification(notification_code: str, user: dict = Depends(get_c
             }
         })
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
@@ -167,7 +167,7 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
 
         return SuccessResponse[ResponseNotification](**response)
     except:
-        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if code else message, exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
             status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
             code=code if code else CODE_ERROR_SERVER,
