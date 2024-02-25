@@ -1,5 +1,6 @@
 import uuid
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from typing import List
 import logging
@@ -8,7 +9,7 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNA
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
-from api.endpoint.conversation.schema import ResponseConversation, RequestCreateConversation
+from api.endpoint.conversation.schema import ResponseConversation, RequestCreateConversation, ResponseListConversation
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION
 from api.third_parties.database.model.conversation import Conversation
@@ -61,7 +62,7 @@ async def get_conversation(conversation_code: str):
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponseConversation]],
+        success_response_model=SuccessResponse[ResponseListConversation],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -86,10 +87,12 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
             conversation["user_code_to_chat"] = user_to_chat
             conversation["current_user_code"] = user
 
-        last_conversation = list_conversation_cursor[1]
-        print(last_conversation)
-        last_conversation_id = last_conversation['_id']
-        print(type(last_conversation_id))
+        last_conversation_id = ObjectId("                        ")
+        if list_conversation_cursor:
+            last_conversation = list_conversation_cursor[-1]
+            print(last_conversation)
+            last_conversation_id = last_conversation['_id']
+            print(type(last_conversation_id))
 
         response = {
             "data":
@@ -102,7 +105,7 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        return SuccessResponse[List[ResponseConversation]](**response)
+        return SuccessResponse[ResponseListConversation](**response)
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(

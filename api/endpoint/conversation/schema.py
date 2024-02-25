@@ -1,10 +1,8 @@
 from typing import List
 
 from pydantic import BaseModel,  Field
-# from bson import ObjectId
 
-# from api.base.schema import CommonModel
-# from api.third_parties.database.model.base import BaseModel
+from api.third_parties.database.mongodb import PyObjectId
 
 
 class ResponseConversation(BaseModel):
@@ -20,3 +18,8 @@ class ResponseCreateConversation(BaseModel):
 class RequestCreateConversation(BaseModel):
     user_code_to_chat: str = Field("", example='')  # user_code of user to chat
     current_user_code: str = Field("", example='')  # user_code of current user
+
+
+class ResponseListConversation(BaseModel):
+    list_conversation_info: List[ResponseConversation] = Field(...)
+    last_conversation_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_conversation_id")

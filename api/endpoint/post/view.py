@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import List
 
+from bson import ObjectId
 from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -11,7 +12,7 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_DELETE_POST
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
-    ResponseDeletePost
+    ResponseDeletePost, ResponseListPost
 from api.third_parties.cloud.query import upload_image_cloud, delete_image, upload_video
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.model.post import Post
@@ -36,7 +37,7 @@ logger = logging.getLogger("post.view.py")
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponsePost]],
+        success_response_model=SuccessResponse[ResponseListPost],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -59,10 +60,14 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
         for post in list_post_cursor:
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
-            post['liked_by'] = len(post['liked_by'])
+            post['liked_by'] = list(post['liked_by'])
+            post['videos'] = str(post['videos'])
+            post['video_ids'] = str(post['video_ids'])
 
-        last_post = list_post_cursor[-1]
-        last_post_id = last_post['_id']
+        last_post_id = ObjectId("                        ")
+        if list_post_cursor:
+            last_post = list_post_cursor[-1]
+            last_post_id = last_post['_id']
 
         response = {
             "data":
@@ -75,7 +80,7 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        return SuccessResponse[List[ResponsePost]](**response)
+        return SuccessResponse[ResponseListPost](**response)
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
