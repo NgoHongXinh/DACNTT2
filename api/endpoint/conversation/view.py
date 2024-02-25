@@ -14,7 +14,6 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, \
     get_all_conversation_of_current_user, create_conversation, get_conversation_by_members
-from api.third_parties.database.query.friend_request import get_friend
 from api.third_parties.database.query.user import get_user_by_code
 from settings.init_project import open_api_standard_responses, http_exception
 
@@ -38,7 +37,6 @@ async def get_conversation(conversation_code: str):
         if not conversation_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='conversation_code not allow empty')
         cursor = await get_conversation_by_code(conversation_code)
-        print(cursor)
         response = {
             "data": cursor,
             "response_status": {
@@ -73,19 +71,12 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
         if not user:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = 'User code not found'
             raise HTTPException(status_code)
 
         list_conversation_cursor = await get_all_conversation_of_current_user(
             user_code=user['user_code'],
             last_conversation_id=last_user_ids
         )
-        if not list_conversation_cursor:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_SERVER
-            message = 'Got some error when get all conversation'
-            raise HTTPException(status_code)
-
         list_conversation_cursor = await list_conversation_cursor.to_list(None)
 
         for conversation in list_conversation_cursor:

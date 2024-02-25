@@ -53,24 +53,16 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
             user_code=user['user_code'],
             last_post_id=last_post_ids
         )
-        if not list_post_cursor:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = "Got error when get all post of user"
-            raise HTTPException(status_code)
 
         list_post_cursor = await list_post_cursor.to_list(None)
 
         for post in list_post_cursor:
-            print(post['_id'], post['created_time'])
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
             post['liked_by'] = len(post['liked_by'])
 
         last_post = list_post_cursor[-1]
-        print(last_post)
         last_post_id = last_post['_id']
-        print(type(last_post_id))
 
         response = {
             "data":

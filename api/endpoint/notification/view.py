@@ -12,7 +12,7 @@ from api.endpoint.notification.schema import (ResponseNotification, ResponseList
                                               ResponseNumberNotification, ResponseDeleteNotification)
 from api.library.constant import (CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND,
                                   CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_USER_CODE_NOT_FOUND,
-                                  CODE_ERROR_WHEN_DELETE_NOTIFICATION)
+                                  CODE_ERROR_WHEN_DELETE_NOTIFICATION, CODE_ERROR_INPUT)
 
 
 from api.third_parties.database.query import notification as query_notification
@@ -48,15 +48,9 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
             user_code=user['user_code'],
             last_notification_id=last_notification_id
         )
-        if not notifications:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = 'Failed get notification'
-            raise HTTPException(status_code)
         list_notifications_cursor = await notifications.to_list(None)
 
         for noti in list_notifications_cursor:
-            print(noti['_id'], noti['created_time'])
             user_guest = await get_user_by_code(noti['user_code_guest'])
             noti["user_info"] = user
             noti["user_guest_info"] = user_guest
@@ -104,7 +98,7 @@ async def delete_notification(notification_code: str, user: dict = Depends(get_c
     try:
         if not notification_code or not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = 'notification_code or user_code not allow empty'
             raise HTTPException(status_code)
 
@@ -149,7 +143,7 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
     try:
         if not notification_code or not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_NOTIFICATION_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = 'notification_code or user_code not allow empty'
             raise HTTPException(status_code)
 
@@ -194,8 +188,6 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
 )
 async def get_number_notification(user: dict = Depends(get_current_user)):
     try:
-        if not user:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='user not allow empty')
         notifications = await query_notification.get_noti_not_read(user_code=user['user_code'])
         list_notifications_cursor = await notifications.to_list(None)
         count = 0
