@@ -15,6 +15,10 @@ CODE_ERROR_COMMENT_CODE_NOT_FOUND = "13"
 CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT = "15"
 CODE_ERROR_WHEN_UPDATE_CREATE_POST = "16"
 CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION = "17"
+CODE_ERROR_WHEN_DELETE_POST = "18"
+CODE_ERROR_WHEN_DELETE_COMMENT = "19"
+CODE_ERROR_WHEN_DELETE_NOTIFICATION = "20"
+CODE_ERROR_WHEN_UPDATE_CREATE_NOTIFICATION = "21"
 
 EMAIL_LOGIN_FAIL = "14"
 
@@ -25,8 +29,8 @@ TYPE_MESSAGE_RESPONSE = {
         CODE_SUCCESS: "Success",
         CODE_TOKEN_NOT_VALID: 'Token is not valid',
         CODE_LOGIN_FAIL: "Username or password was wrong",
-        CODE_ERROR_USER_CODE_NOT_FOUND: "user code not found",
-        CODE_ERROR_POST_CODE_NOT_FOUND: "Post not found",
+        CODE_ERROR_USER_CODE_NOT_FOUND: "User code not found",
+        CODE_ERROR_POST_CODE_NOT_FOUND: "Post code not found",
         CODE_ERROR_CANT_CHANGE_INFO: "Can't change information of other use",
         CODE_ERROR_WHEN_UPDATE_CREATE: "Got some error when update or create data",
         CODE_ERROR_INPUT: "",
@@ -40,7 +44,12 @@ TYPE_MESSAGE_RESPONSE = {
         EMAIL_LOGIN_FAIL: "Email NOT ALLOWED",
         CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT: "Got some error when create comment",
         CODE_ERROR_WHEN_UPDATE_CREATE_POST: "Got some error when create post",
-        CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION: "Got some error when create conversation"
+        CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION: "Got some error when create conversation",
+        CODE_ERROR_WHEN_DELETE_POST: "Got some error when delete post",
+        CODE_ERROR_WHEN_DELETE_COMMENT: "Got some error when delete comment",
+        CODE_ERROR_WHEN_DELETE_NOTIFICATION: "Got some error when delete notification",
+        CODE_ERROR_WHEN_UPDATE_CREATE_NOTIFICATION: "Got some error when update notification"
+
     }
 }
 
