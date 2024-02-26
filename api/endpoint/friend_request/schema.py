@@ -41,3 +41,8 @@ class ResponseFriendOfUser(BaseModel):
 class ResponseListFriend(BaseModel):
     list_friend_request_info: List[ResponseFriendOfUser] = Field(...)
     last_friend_request_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_friend_request_id")
+
+
+class ResponseListFriendOfUser(BaseModel):
+    list_friend_info: List[ResponseFriendOfUser] = Field(...)
+    last_friend_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_friend_id")
