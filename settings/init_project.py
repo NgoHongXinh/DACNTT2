@@ -7,7 +7,7 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE
 from definitions import ROOT_DIR
-
+print(f"{ROOT_DIR}/.env")
 dotenv_values = dotenv_values(f"{ROOT_DIR}/.env")
 config_system = {
     "PROJECT_NAME": dotenv_values.get('PROJECT_NAME', ""),
@@ -26,7 +26,7 @@ config_system = {
     "EXPIRES_TIME": int(dotenv_values.get("EXPIRES_TIME", "300")),
     "CLOUD_NAME": dotenv_values.get("CLOUD_NAME"),
     "CLOUD_API_KEY": dotenv_values.get("CLOUD_API_KEY"),
-    "API_SECRET": dotenv_values.get("API_SECRET"),
+    "API_SECRECT": dotenv_values.get("API_SECRECT"),
     "GOOGLE_CLIENT_ID": dotenv_values.get("GOOGLE_CLIENT_ID")
 }
 

@@ -1,11 +1,10 @@
 import cloudinary
 import cloudinary.uploader
 from settings.init_project import config_system
-
 cloudinary.config(
     cloud_name=config_system['CLOUD_NAME'],
     api_key=config_system['CLOUD_API_KEY'],
-    api_secret=config_system['API_SECRET']
+    api_secret=config_system['API_SECRECT']
 )
 
 
