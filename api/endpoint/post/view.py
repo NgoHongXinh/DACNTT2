@@ -108,7 +108,7 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = "user not allow empty"
             raise HTTPException(status_code)
         list_post_cursor = await post_query.get_all_post(
@@ -587,7 +587,7 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
                 notification_code=str(uuid.uuid4()),
                 user_code=post['created_by'],
                 user_code_guest=user['user_code'],
-                content=f" đã chia sẻ bài viết của bạn",
+                content=f"đã chia sẻ bài viết của bạn",
             )
             new_noti = await create_noti(notification)
             if not new_noti:

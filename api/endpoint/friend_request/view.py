@@ -148,6 +148,11 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 status_code = HTTP_400_BAD_REQUEST
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
+            else:
+                get_other_user_if_online = await get_user_if_user_is_online(user_code_want_request)
+                if get_other_user_if_online:
+                    await send_noti(f'{user["fullname"]} đã gửi lời mời kết bạn', get_other_user_if_online['socket_id'])
+
             return SuccessResponse[ResponseCreateFriendRequest](**{
                 "data": {"message": "Send request success"},
                 "response_status": {

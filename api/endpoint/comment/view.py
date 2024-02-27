@@ -155,6 +155,7 @@ async def create_comment(
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_WHEN_PUSH_COMMENT
             raise HTTPException(status_code)
+
         # Lấy thông tin bài viết
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
