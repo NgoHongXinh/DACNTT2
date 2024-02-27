@@ -20,6 +20,19 @@ async def get_all_post_by_user_code(user_code: str, last_post_id=""):
         sort=-1)
     return list_post_cursor
 
+async def get_all_post(user_code, friends_code, last_post_id="" ):
+    db = await MongoDBService().get_db()
+    # cursor = db['post'].find({"created_by": user_code})
+    # posts = await cursor.to_list(None)
+    # return posts
+    list_post_cursor = await paging(
+        query_param_for_paging=last_post_id,
+        database_name="post",
+        query_condition={ "$or": [{ "created_by": user_code }, { "created_by": { "$in": friends_code } }] },
+        db=db,
+        sort=-1)
+    return list_post_cursor
+
 
 async def get_post_by_post_code(post_code: str):
     db = await MongoDBService().get_db()

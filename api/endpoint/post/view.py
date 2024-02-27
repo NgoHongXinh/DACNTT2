@@ -43,7 +43,7 @@ logger = logging.getLogger("post.view.py")
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
+async def get_all_posts_of_user(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
     code = message = status_code = ''
 
     try:
@@ -91,6 +91,64 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
             message=message
         )
 
+
+@router.get(
+    path="/post",
+    name="get_all_post",
+    description="get all posts",
+    status_code=HTTP_200_OK,
+    responses=open_api_standard_responses(
+        success_status_code=HTTP_200_OK,
+        success_response_model=SuccessResponse[ResponseListPost],
+        fail_response_model=FailResponse[ResponseStatus]
+    )
+)
+async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
+    code = message = status_code = ''
+    try:
+        if not user:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            message = "user not allow empty"
+            raise HTTPException(status_code)
+        list_post_cursor = await post_query.get_all_post(
+            user_code=user['user_code'],
+            friends_code=user['friends_code'],
+            last_post_id=last_post_ids
+        )
+        list_post_cursor = await list_post_cursor.to_list(None)
+
+        for post in list_post_cursor:
+            user_info = await user_query.get_user_by_code(post['created_by'])
+            post['created_by'] = user_info
+            post['liked_by'] = list(post['liked_by'])
+            post['videos'] = str(post['videos'])
+            post['video_ids'] = str(post['video_ids'])
+
+        last_post_id = ObjectId("                        ")
+        if list_post_cursor:
+            last_post = list_post_cursor[-1]
+            last_post_id = last_post['_id']
+
+        response = {
+            "data":
+                {
+                    "list_post_info": list_post_cursor,
+                    "last_post_id": last_post_id
+                },
+            "response_status": {
+                "code": CODE_SUCCESS,
+                "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+            }
+        }
+        return SuccessResponse[ResponseListPost](**response)
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+        )
 
 @router.get(
     path="/post/{post_code}",
