@@ -34,9 +34,14 @@ logger = logging.getLogger("conversation.view.py")
     )
 )
 async def get_conversation(conversation_code: str):
+    status_code = code = message = ""
+
     try:
         if not conversation_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='conversation_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'conversation_code not allow empty'
+            raise HTTPException(status_code)
         cursor = await get_conversation_by_code(conversation_code)
         response = {
             "data": cursor,
@@ -48,10 +53,11 @@ async def get_conversation(conversation_code: str):
 
         return SuccessResponse[ResponseConversation](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
@@ -71,7 +77,8 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_user
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
+            message = "user not allow empty"
             raise HTTPException(status_code)
 
         list_conversation_cursor = await get_all_conversation_of_current_user(
@@ -133,14 +140,14 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = 'User code not found'
+            code = CODE_ERROR_INPUT
+            message = "user not allow empty"
             raise HTTPException(status_code)
         receiver_id = user_chat.user_code_to_chat
         if not receiver_id:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = 'user_code_to_chat not allow empty'
+            message = 'user_chat not allow empty'
             raise HTTPException(status_code)
 
         # Kiểm tra xem user có tồn tại không bằng cách kiểm tra user_code
@@ -148,7 +155,6 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
         if not receiver:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = f"User with user_code {receiver_id} does not exist."
             raise HTTPException(status_code)
 
         # Kiểm tra xem conversation đã tồn tại chưa nếu có thì trả về conversation đó
