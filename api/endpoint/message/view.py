@@ -7,10 +7,11 @@ from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Q
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.message.schema import ResponseMessage, RequestCreateMessage
-from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER
+from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT
 from api.third_parties.database.model.message import Message
 from api.third_parties.database.query.conversation import get_conversation_by_code
-from api.third_parties.database.query.message import create_message, get_message_by_message_code, get_all_message_by_conversation_code
+from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
+    get_all_message_by_conversation_code, get_message_id
 from api.third_parties.socket.socket import sio_server
 from settings.init_project import open_api_standard_responses, http_exception
 
@@ -31,9 +32,14 @@ logger = logging.getLogger("message.view.py")
 )
 async def create_a_message(request_message_data: RequestCreateMessage,
                            user: dict = Depends(get_current_user)):
+    code = message = status_code = ''
+
     try:
         if not request_message_data.conversation_code:
-            return http_exception(status_code=HTTP_400_BAD_REQUEST, message='conversation_code not allow empty')
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'conversation_code not allow empty'
+            raise HTTPException(status_code)
 
         message_data = Message(
             message_code=str(uuid.uuid4()),
@@ -43,9 +49,10 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         )
         new_message = await create_message(message_data)
 
-        new_message_obj = await get_message_by_message_code(new_message)
+        new_message_obj = await get_message_id(new_message)
+
         response = {
-            "data": ResponseMessage.parse_obj(new_message_obj.to_json()),
+            "data": new_message_obj,
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -53,10 +60,11 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         }
         return SuccessResponse[ResponseMessage](**response)
     except:
-        logger.error(exc_info=True)
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
         return http_exception(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            code=CODE_ERROR_SERVER,
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
         )
 
 
