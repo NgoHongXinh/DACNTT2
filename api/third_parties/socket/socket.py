@@ -29,7 +29,7 @@ async def disconnect(sid):
     await disconnect_user_online_socketid(socket_id=sid)
 
 
-@sio_server.event
+@sio_server.on("disconnect_server")
 async def change_status_user_online(sid):
     print(f'{sid}: disconnected')
     await disconnect_user_online_socketid(socket_id=sid)
@@ -50,7 +50,7 @@ async def new_user(sid, user_code):
 async def join_room(sid, data):
     print("da tao room", data, sid)
     # sio_server.enter_room(sid, 'chat_users')
-    sio_server.enter_room(sid, data['room_name'])
+    sio_server.enter_room(sid, data)
 
 
 @sio_server.event
