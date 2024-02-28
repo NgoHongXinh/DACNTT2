@@ -11,12 +11,13 @@ from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateCom
     ResponseListComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
-    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_USER_CODE_NOT_FOUND, \
-    CODE_ERROR_WHEN_UPDATE_CREATE_POST
+    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_WHEN_PUSH_COMMENT
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
+from api.third_parties.database.query.user_online import get_user_if_user_is_online
+from api.third_parties.socket.socket import send_noti
 from settings.init_project import open_api_standard_responses, http_exception
 from api.third_parties.database.model.comment import Comment
 from api.third_parties.database.query import notification as notification_query
@@ -57,7 +58,8 @@ async def get_all_comment(post_code: str, last_comment_ids: str = Query(default=
             user = await user_query.get_user_by_code(comment['created_by'])
             comment['created_by'] = user
 
-        last_comment_id = ObjectId("                        ") #  24-character hex string để mặc đinh nếu kO pyobjetc sẽ ko parse được
+        last_comment_id = ObjectId(
+            "                        ")  # 24-character hex string để mặc đinh nếu kO pyobjetc sẽ ko parse được
         if list_comment_cursor:
             last_comment = list_comment_cursor[-1]
             last_comment_id = last_comment['_id']
@@ -103,15 +105,20 @@ async def create_comment(
     status_code = code = message = ""
 
     try:
-        if not user:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
-            message = "User code not found"
-            raise HTTPException(status_code)
-        if not content and not image_upload and not post_code:
+        if not user :
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = "content or image_upload or post_code not allow empty"
+            message = "user not allow empty"
+            raise HTTPException(status_code)
+        if not post_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "post_code not allow empty"
+            raise HTTPException(status_code)
+        if not content and not image_upload:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "content or image_upload not allow empty"
             raise HTTPException(status_code)
 
         image_id = ""
@@ -142,25 +149,27 @@ async def create_comment(
             code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
             raise HTTPException(status_code)
         new_comment['created_by'] = user
-        push_comment = await post_query.push_comment_to_post(post_code, new_comment_id)  # push comment to post
+        # đẩy comment vào post
+        push_comment = await post_query.push_comment_to_post(post_code, new_comment_id)
         if not push_comment:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_WHEN_UPDATE_CREATE_POST
+            code = CODE_ERROR_WHEN_PUSH_COMMENT
             raise HTTPException(status_code)
+
         # Lấy thông tin bài viết
         post = await post_query.get_post_by_post_code(post_code)
         if not post:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_POST_CODE_NOT_FOUND
             raise HTTPException(status_code)
-        
+
         # Kiểm tra xem có phải chủ bài viết comment hay không
         if user['user_code'] != post['created_by']:
             notification = Notification(
                 notification_code=str(uuid.uuid4()),
                 user_code=post['created_by'],
                 user_code_guest=user['user_code'],
-                content=f"{user['fullname']} đã bình luận bài viết của bạn"
+                content=f" đã bình luận bài viết của bạn"
             )  # Tạo thông báo
             new_noti = await notification_query.create_noti(notification)
             if not new_noti:
@@ -168,6 +177,11 @@ async def create_comment(
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
             # # Gửi socket notification (nếu online)
+            else:
+                get_other_user_if_online = await get_user_if_user_is_online(post['created_by'])
+                if get_other_user_if_online:
+                    await send_noti(f"{user['fullname']} đã bình luận bài viết của bạn",
+                                    get_other_user_if_online['socket_id'])
 
         response = {
             "data": new_comment,
@@ -260,12 +274,18 @@ async def update_comment(
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
+            message = "user not allow empty"
             raise HTTPException(status_code)
-        if not comment_code and not content and not image_upload:
+        if not comment_code:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = "comment_code or content or image_upload not allow empty"
+            message = "comment_code not allow empty"
+            raise HTTPException(status_code)
+        if not content and not image_upload:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "content or image_upload not allow empty"
             raise HTTPException(status_code)
         image_id = ""
         image = ""

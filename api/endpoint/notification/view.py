@@ -41,7 +41,7 @@ async def get_notification(user: dict = Depends(get_current_user), last_notifica
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = 'user_code not allow empty'
             raise HTTPException(status_code)
         notifications = await query_notification.get_notifications(
@@ -96,10 +96,15 @@ async def delete_notification(notification_code: str, user: dict = Depends(get_c
     code = message = status_code = ''
 
     try:
-        if not notification_code or not user:
+        if not user:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = 'notification_code or user_code not allow empty'
+            message = 'user_code not allow empty'
+            raise HTTPException(status_code)
+        if not notification_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'notification_code not allow empty'
             raise HTTPException(status_code)
 
         deleted = await query_notification.delete_notification(
@@ -141,10 +146,15 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
     code = message = status_code = ''
 
     try:
-        if not notification_code or not user:
+        if not user:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = 'notification_code or user_code not allow empty'
+            message = 'user_code not allow empty'
+            raise HTTPException(status_code)
+        if not notification_code:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = 'notification_code not allow empty'
             raise HTTPException(status_code)
 
         updated = await query_notification.update_notification(
@@ -153,7 +163,6 @@ async def update_notification(notification_code: str, user: dict = Depends(get_c
         )
         if not updated:
             status_code = HTTP_400_BAD_REQUEST
-            message = 'update_notification failed'
             code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
             raise HTTPException(status_code)
 

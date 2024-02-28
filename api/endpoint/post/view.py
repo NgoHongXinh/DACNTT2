@@ -23,6 +23,8 @@ from api.third_parties.database.query.notification import create_noti
 from api.third_parties.database.query.post import get_post_by_id, get_post_by_post_code, update_like_post, \
     get_post_of_user_by_code
 from api.third_parties.database.query.user import get_list_user_in_list
+from api.third_parties.database.query.user_online import get_user_if_user_is_online
+from api.third_parties.socket.socket import send_noti
 from settings.init_project import open_api_standard_responses, http_exception
 
 router = APIRouter()
@@ -47,7 +49,7 @@ async def get_all_posts_of_user(user: dict = Depends(get_current_user), last_pos
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = "user not allow empty"
             raise HTTPException(status_code)
         list_post_cursor = await post_query.get_all_post_by_user_code(
@@ -106,7 +108,7 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = "user not allow empty"
             raise HTTPException(status_code)
         list_post_cursor = await post_query.get_all_post(
@@ -216,7 +218,7 @@ async def create_post(
         if not user:
             status_code = HTTP_400_BAD_REQUEST
             message = "user not allow empty"
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
 
         if not content and not images_upload and not video_upload:
@@ -269,7 +271,6 @@ async def create_post(
         if not new_post:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_POST_CODE_NOT_FOUND
-            message = 'Got error when get new post info after create post'
             raise HTTPException(status_code)
         new_post['created_by'] = user
 
@@ -371,7 +372,12 @@ async def update_post(
         if not user:
             status_code = HTTP_400_BAD_REQUEST
             message = "user not allow empty"
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
+            raise HTTPException(status_code)
+        if not post_code:
+            status_code = HTTP_400_BAD_REQUEST
+            message = 'post_code not allow empty'
+            code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
         if not content and not images_upload and not video_upload:
             status_code = HTTP_400_BAD_REQUEST
@@ -460,7 +466,7 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = "user not allow empty"
             raise HTTPException(status_code)
         if not post_code:
@@ -485,11 +491,17 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
                     notification_code=str(uuid.uuid4()),
                     user_code=post['created_by'],
                     user_code_guest=user['user_code'],
-                    content=f"{user['fullname']} đã thích bài viết của bạn",
+                    content=f"đã thích bài viết của bạn",
                 )
                 new_noti = await create_noti(notification)
                 if not new_noti:
                     logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+
+                else:
+                    get_other_user_if_online = await get_user_if_user_is_online(post['created_by'])
+                    if get_other_user_if_online:
+                        await send_noti(f"{user['fullname']} đã thích bài viết của bạn",
+                                        get_other_user_if_online['socket_id'])
 
         list_liked_by = []
         # if len(new_post_like_info['liked_by']) >= 3:
@@ -536,7 +548,7 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
     try:
         if not user:
             status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
+            code = CODE_ERROR_INPUT
             message = "user not allow empty"
             raise HTTPException(status_code)
         if not post_code:
@@ -575,12 +587,17 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
                 notification_code=str(uuid.uuid4()),
                 user_code=post['created_by'],
                 user_code_guest=user['user_code'],
-                content=f"{user['fullname']} đã chia sẻ bài viết của bạn",
+                content=f"đã chia sẻ bài viết của bạn",
             )
             new_noti = await create_noti(notification)
             if not new_noti:
                 logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
 
+            else:
+                get_other_user_if_online = await get_user_if_user_is_online(post['created_by'])
+                if get_other_user_if_online:
+                    await send_noti(f"{user['fullname']} đã chia sẻ bài viết của bạn",
+                                    get_other_user_if_online['socket_id'])
         response = {
             "data": {
                 "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
