@@ -54,9 +54,8 @@ async def join_room(sid, data):
 
 
 @sio_server.event
-async def send_mess_room(sid, room, data):
-    print(sid)
-    await sio_server.emit('mess_to_room', data, room=room)
+async def send_mess_room(event, room, data):
+    await sio_server.emit(event, data, room=room)
 
 
 

@@ -61,3 +61,6 @@ FRIEND = 'friend'
 NOT_FRIEND = 'not_friend'
 PENDDING = 'pendding'
 WAIT_ACCEPT = 'wait_accept'
+
+EVENT_COMMENT = "event_comment"
+EVENT_CHAT = "event_chat"

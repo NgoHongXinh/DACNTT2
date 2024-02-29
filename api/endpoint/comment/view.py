@@ -11,18 +11,18 @@ from api.endpoint.comment.schema import ResponseComment, ResponseCreateUpdateCom
     ResponseListComment
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_COMMENT_CODE_NOT_FOUND, \
     CODE_ERROR_INPUT, CODE_ERROR_SERVER, CODE_ERROR_WHEN_UPDATE_CREATE_NOTI, CODE_ERROR_POST_CODE_NOT_FOUND, \
-    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_WHEN_PUSH_COMMENT
+    CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT, CODE_ERROR_WHEN_DELETE_COMMENT, CODE_ERROR_WHEN_PUSH_COMMENT, EVENT_COMMENT
 from api.third_parties.cloud.query import upload_image_comment_cloud, delete_image
 from api.third_parties.database.query import comment as comment_query
 from api.third_parties.database.query import post as post_query
 from api.third_parties.database.query import user as user_query
 from api.third_parties.database.query.user_online import get_user_if_user_is_online
-from api.third_parties.socket.socket import send_noti
+from api.third_parties.socket.socket import send_noti, send_mess_room
 from settings.init_project import open_api_standard_responses, http_exception
 from api.third_parties.database.model.comment import Comment
 from api.third_parties.database.query import notification as notification_query
 from api.third_parties.database.model.notification import Notification
-
+from fastapi.encoders import jsonable_encoder
 logger = logging.getLogger("comment.view.py")
 router = APIRouter()
 
@@ -105,7 +105,7 @@ async def create_comment(
     status_code = code = message = ""
 
     try:
-        if not user :
+        if not user:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
             message = "user not allow empty"
@@ -144,17 +144,21 @@ async def create_comment(
             code = CODE_ERROR_WHEN_UPDATE_CREATE_COMMENT
             raise HTTPException(status_code)
         new_comment = await comment_query.get_comment_by_id(new_comment_id)
+
         if not new_comment:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_COMMENT_CODE_NOT_FOUND
             raise HTTPException(status_code)
-        new_comment['created_by'] = user
+        new_comment['created_by'] = user if user else None
         # đẩy comment vào post
-        push_comment = await post_query.push_comment_to_post(post_code, new_comment_id)
-        if not push_comment:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_WHEN_PUSH_COMMENT
-            raise HTTPException(status_code)
+        ## hiện tại ko can công đoạn này nữa
+        # print(post_code, new_comment['comment_code'])
+        # push_comment = await post_query.push_comment_to_post(post_code, new_comment['comment_code'])
+        # print(push_comment)
+        # if not push_comment:
+        #     status_code = HTTP_400_BAD_REQUEST
+        #     code = CODE_ERROR_WHEN_PUSH_COMMENT
+        #     raise HTTPException(status_code)
 
         # Lấy thông tin bài viết
         post = await post_query.get_post_by_post_code(post_code)
@@ -164,6 +168,7 @@ async def create_comment(
             raise HTTPException(status_code)
 
         # Kiểm tra xem có phải chủ bài viết comment hay không
+        get_other_user_if_online = None
         if user['user_code'] != post['created_by']:
             notification = Notification(
                 notification_code=str(uuid.uuid4()),
@@ -183,6 +188,7 @@ async def create_comment(
                     await send_noti(f"{user['fullname']} đã bình luận bài viết của bạn",
                                     get_other_user_if_online['socket_id'])
 
+        # new_comment["_id"] = str(new_comment["_id"])
         response = {
             "data": new_comment,
             "response_status": {
@@ -190,6 +196,8 @@ async def create_comment(
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
+        await send_mess_room(event=EVENT_COMMENT,data=jsonable_encoder(SuccessResponse[ResponseComment](**response)), room=post['post_code'])
+
         return SuccessResponse[ResponseComment](**response)
 
     except:
