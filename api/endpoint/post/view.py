@@ -43,7 +43,7 @@ logger = logging.getLogger("post.view.py")
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_posts_of_user(user: dict = Depends(get_current_user), last_post_ids: str = Query(default="")):
+async def get_all_posts_of_user(user_code: str, user: dict = Depends(get_current_user),  last_post_ids: str = Query(default="")):
     code = message = status_code = ''
 
     try:
@@ -53,7 +53,7 @@ async def get_all_posts_of_user(user: dict = Depends(get_current_user), last_pos
             message = "user not allow empty"
             raise HTTPException(status_code)
         list_post_cursor = await post_query.get_all_post_by_user_code(
-            user_code=user['user_code'],
+            user_code=user_code,
             last_post_id=last_post_ids
         )
 

@@ -13,7 +13,7 @@ from api.third_parties.database.mongodb import PyObjectId
 class ResponseComment(BaseModel):
     comment_code: str = Field("", example='')
     post_code: str = Field("", example='')
-    created_by: ResponseUser = Field()
+    created_by: ResponseUser = Field(None)
     image: str = Field("", example='')
     image_id: str = Field("", example='')
     content: str = Field("", example='')
