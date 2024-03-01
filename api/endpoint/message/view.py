@@ -49,10 +49,11 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         )
         new_message = await create_message(message_data)
 
-        new_message_obj = await get_message_id(new_message)
+        new_message_id = await get_message_id(new_message)
+        await sio_server.emit("receiveNewMess", new_message_id, room=new_message_id.conversation_code)
 
         response = {
-            "data": new_message_obj,
+            "data": new_message_id,
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],

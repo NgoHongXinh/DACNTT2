@@ -147,7 +147,7 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
         if not receiver_id:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = 'user_chat not allow empty'
+            message = 'user_code_to_chat not allow empty'
             raise HTTPException(status_code)
 
         # Kiểm tra xem user có tồn tại không bằng cách kiểm tra user_code

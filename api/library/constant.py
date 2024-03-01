@@ -20,6 +20,8 @@ CODE_ERROR_WHEN_DELETE_COMMENT = "19"
 CODE_ERROR_WHEN_DELETE_NOTIFICATION = "20"
 CODE_ERROR_WHEN_UPDATE_CREATE_NOTIFICATION = "21"
 CODE_ERROR_WHEN_PUSH_COMMENT = "22"
+CODE_ERROR_WHEN_UPDATE_CREATE_GROUP = "23"
+CODE_ERROR_GROUP_CODE_NOT_FOUND = "24"
 
 EMAIL_LOGIN_FAIL = "14"
 
@@ -50,7 +52,9 @@ TYPE_MESSAGE_RESPONSE = {
         CODE_ERROR_WHEN_DELETE_COMMENT: "Got some error when delete comment",
         CODE_ERROR_WHEN_DELETE_NOTIFICATION: "Got some error when delete notification",
         CODE_ERROR_WHEN_UPDATE_CREATE_NOTIFICATION: "Got some error when update notification",
-        CODE_ERROR_WHEN_PUSH_COMMENT: "Got some error when push comment to post"
+        CODE_ERROR_WHEN_PUSH_COMMENT: "Got some error when push comment to post",
+        CODE_ERROR_WHEN_UPDATE_CREATE_GROUP: "Got some error when create group",
+        CODE_ERROR_GROUP_CODE_NOT_FOUND: "Group code not found",
 
     }
 }

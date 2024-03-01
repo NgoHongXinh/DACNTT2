@@ -6,6 +6,8 @@ from api.endpoint.friend_request import router as friend_request_route
 from api.endpoint.message import router as message_route
 from api.endpoint.notification import router as notification_route
 from api.endpoint.post import router as post_route
+from api.endpoint.group import router as group_route
+
 from api.endpoint.authen import router as authen_route
 
 
@@ -19,3 +21,4 @@ router.include_router(router=notification_route.router, tags=['NOTIFICATION'])
 router.include_router(router=post_route.router, tags=['POST'])
 # router.include_router(router=user_online_route.router, tags=['USER_ONLINE'])
 router.include_router(router=authen_route.router, tags=['AUTHEN'])
+router.include_router(router=group_route.router, tags=['GROUP'])
