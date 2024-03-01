@@ -16,3 +16,15 @@ class RequestCreateMessage(BaseModel):
     sender_code: str = Field("", example='')
     text: str = Field("", example='')
 
+
+class RequestCreateMessageGroup(BaseModel):
+    group_code: str = Field("", example='')
+    sender_code: str = Field("", example='')
+    text: str = Field("", example='')
+
+
+class ResponseGroupMessage(BaseModel):
+    message_code: str = Field("", example='')
+    group_code: str = Field("", example='')
+    sender_code: str = Field("", example='')
+    text: str = Field("", example='')

@@ -1,4 +1,4 @@
-from api.third_parties.database.model.message import Message
+from api.third_parties.database.model.message import Message, MessageGroup
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 from api.third_parties.database.query.paging import paging_sort_by_create_time
 
@@ -29,3 +29,8 @@ async def create_message(data: Message):
     result = await db['message'].insert_one(data.to_json())
     return result.inserted_id
 
+
+async def create_message_group(message_group_data: MessageGroup):
+    db = await MongoDBService().get_db()
+    result = await db['message'].insert_one(message_group_data.to_json())
+    return result.inserted_id
