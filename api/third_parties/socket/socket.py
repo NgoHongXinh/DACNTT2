@@ -58,8 +58,8 @@ async def send_mess_room(event, room, data):
     await sio_server.emit(event, data, room=room)
 
 
-
 @sio_server.event
 async def send_noti(data, user_sid):
     print(user_sid, data)
     await sio_server.emit("send_noti", data, room=user_sid)
+

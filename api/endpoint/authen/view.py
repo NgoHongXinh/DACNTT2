@@ -10,7 +10,7 @@ from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.authen.schema import ResponseToken, RequestInfoToken
 from api.endpoint.user.schema import ResponseUser
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_LOGIN_FAIL, EMAIL_LOGIN_FAIL, \
-    CODE_ERROR_SERVER
+    CODE_ERROR_SERVER, CODE_TOKEN_NOT_VALID, CREATE_USER_FAIL, CODE_ERROR_INPUT
 from api.third_parties.database.model.user import User
 from api.third_parties.database.query.user import get_user_by_code, check_user, get_user_by_email, create_new_user, \
     get_user_id
@@ -35,20 +35,33 @@ router = APIRouter()
 
 )
 async def get_token(user: OAuth2PasswordRequestForm = Depends()):
-    username = user.username  # email
-    password = user.password  # password
-    user_login = await check_user(username, password)
-    print(user_login)
-    if not user_login:
-        return http_exception(
-            status_code=401,
-            code=CODE_LOGIN_FAIL
-        )
-    token = await create_access_token(user_login['user_code'])
+    code = message = status_code = ""
+    try:
+        username = user.username  # email
+        password = user.password  # password
+        user_login = await check_user(username, password)
+        print(user_login)
+        if not user_login:
+            status_code = 401
+            code = CODE_LOGIN_FAIL
+            raise HTTPException(status_code)
 
-    return ResponseToken(
-        **{"access_token": token}
-    )
+        token = await create_access_token(user_login['user_code'])
+        if not token:
+            status_code = 401
+            code = CODE_TOKEN_NOT_VALID
+            raise HTTPException(status_code)
+
+        return ResponseToken(
+            **{"access_token": token}
+        )
+    except:
+        logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
+        return http_exception(
+            status_code=status_code if status_code else HTTP_500_INTERNAL_SERVER_ERROR,
+            code=code if code else CODE_ERROR_SERVER,
+            message=message
+        )
 
 
 @router.post(
@@ -96,9 +109,24 @@ async def get_token_google(info_token: RequestInfoToken):
                     birthday="",
                     phone=""
                 )
+
                 new_user = await create_new_user(new_user_data)
+                if not new_user:
+                    status_code = 401
+                    code = CREATE_USER_FAIL
+                    raise HTTPException(status_code)
+
                 user = await get_user_id(new_user)
+                if not user:
+                    status_code = 401
+                    code = CODE_LOGIN_FAIL
+                    raise HTTPException(status_code)
+
                 access_token = await create_access_token(user['user_code'])
+                if not access_token:
+                    status_code = 401
+                    code = CODE_TOKEN_NOT_VALID
+                    raise HTTPException(status_code)
                 print("token: " + access_token)
                 return ResponseToken(
                     **{"access_token": access_token,
@@ -107,6 +135,10 @@ async def get_token_google(info_token: RequestInfoToken):
 
             # Tạo JWT token
             access_token = await create_access_token(user['user_code'])
+            if not access_token:
+                status_code = 401
+                code = CODE_TOKEN_NOT_VALID
+                raise HTTPException(status_code)
             print("token: " + access_token)
             print(ResponseToken(
                 **{"access_token": access_token}
@@ -118,9 +150,7 @@ async def get_token_google(info_token: RequestInfoToken):
         else:
             status_code = 401
             code = EMAIL_LOGIN_FAIL
-            message = "Email not allow",
             raise HTTPException(status_code)
-
 
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)
