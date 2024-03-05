@@ -30,3 +30,6 @@ async def get_conversation_by_members(members):
     return await db['conversation'].find_one({"members": {"$all": members}})
 
 
+async def get_max_stt(user_code):
+    db = await MongoDBService().get_db()
+    return db['conversation'].find({"members": {"$in": [user_code]}}).sort("stt", -1).limit(1)

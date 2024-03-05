@@ -13,6 +13,7 @@ from api.endpoint.conversation.schema import ResponseConversation, RequestCreate
     ResponseCreateConversation
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION
+from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, \
     get_all_conversation_of_current_user, create_conversation, get_conversation_by_members
@@ -177,9 +178,11 @@ async def create_new_conversation(user_chat: RequestCreateConversation,
             })
 
         # Nếu conversation chưa tồn tại thì tạo mới
+        max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
         conversation_data = Conversation(
             members=[user['user_code'], user_code_chat],  # 2 người tham gia cuộc trò chuyện
-            conversation_code=str(uuid.uuid4())
+            conversation_code=str(uuid.uuid4()),
+            stt=max_stt
         )
         conversation = await create_conversation(conversation_data)
         if not conversation:
