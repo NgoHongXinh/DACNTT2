@@ -5,10 +5,12 @@ from api.third_parties.database.model.base import BaseModel
 
 class Conversation(BaseModel):
 
-    def __init__(self, conversation_code=None, members=[]):
+    def __init__(self, stt=0, conversation_code=None, name="",  members=[]):
         super().__init__()
+        self.stt = stt
         self.conversation_code = conversation_code
-        self.members = members  # list of user_code
+        self.name = name
+        self.members = members
 
     def to_json(self):
         data = self.__dict__
