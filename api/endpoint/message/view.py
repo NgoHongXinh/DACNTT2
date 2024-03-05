@@ -1,17 +1,20 @@
 import logging
 import uuid
 from typing import List
+
+from bson import ObjectId
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.message.schema import ResponseMessage, RequestCreateMessage, ResponseGroupMessage, \
-    RequestCreateMessageGroup
+    RequestCreateMessageGroup, ResponseListMessage
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_CONVERSATION_CODE_NOT_FOUND, CODE_ERROR_GROUP_CODE_NOT_FOUND
+from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.message import Message, MessageGroup
-from api.third_parties.database.query.conversation import get_conversation_by_code
+from api.third_parties.database.query.conversation import get_conversation_by_code, update_stt_conversation
 from api.third_parties.database.query.group import get_group_by_code
 from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
     get_all_message_by_conversation_code, get_message_id, create_message_group
@@ -39,12 +42,6 @@ async def create_a_message(request_message_data: RequestCreateMessage,
     code = message = status_code = ''
 
     try:
-        sender_code = request_message_data.sender_code
-        sender = await get_user_by_code(sender_code)
-        if not sender:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_USER_CODE_NOT_FOUND
-            raise HTTPException(status_code)
 
         conversation_code = request_message_data.conversation_code
         conversation = await get_conversation_by_code(conversation_code)
@@ -56,12 +53,12 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         message_data = Message(
             message_code=str(uuid.uuid4()),
             conversation_code=conversation_code,
-            sender_code=sender_code,
+            sender_code=user['user_code'],
             text=request_message_data.text
         )
         new_message = await create_message(message_data)
-        print(new_message)
-
+        max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
+        await update_stt_conversation(conversation_code, max_stt)
         new_message_id = await get_message_id(new_message)
         # await sio_server.emit("receiveNewMess", new_message_id, room=new_message_id.conversation_code)
 
@@ -89,7 +86,7 @@ async def create_a_message(request_message_data: RequestCreateMessage,
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
-        success_response_model=SuccessResponse[List[ResponseMessage]],
+        success_response_model=SuccessResponse[ResponseListMessage],
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
@@ -101,15 +98,25 @@ async def get_all_message(conversation_code: str, last_message_id: str = Query(d
             conversation_code=conversation_code,
             last_message_id=last_message_id
         )
-        list_mess_cursor = await list_mess_cursor.to_list(None)
+        list_mess = await list_mess_cursor.to_list(None)
+        last_conversation_id = ObjectId("                        ")
+        if list_mess:
+            last_conversation = list_mess[-1]
+            last_conversation_id = last_conversation['_id']
+
         response = {
-            "data": list_mess_cursor,
+            "data":
+                {
+                    "list_mess_info": list_mess,
+                    "last_mess_id": last_conversation_id
+                },
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
-        return SuccessResponse[List[ResponseMessage]](**response)
+
+        return SuccessResponse[ResponseListMessage](**response)
     except:
         logger.error(exc_info=True)
         return http_exception(
