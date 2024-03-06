@@ -270,13 +270,13 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
             stt=max_stt,
             type="1"
         )
-        group_id = await create_conversation(group_data)
-        if not group_id:
+        group_info = await create_conversation(group_data)
+        if not group_info:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_WHEN_UPDATE_CREATE_GROUP
             raise HTTPException(status_code)
 
-        new_group = await get_conversation_by_id(group_id)
+        new_group = await get_conversation_by_id(group_info)
 
         response = {
             "data": new_group,
@@ -297,8 +297,8 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
 
 @router.post(
     path="/group/conversation/{conversation_code}",
-    name="add_list_user_to_group",
-    description="add new list user to group",
+    name="update_info_group",
+    description="Update info group",
     status_code=HTTP_200_OK,
     responses=open_api_standard_responses(
         success_status_code=HTTP_200_OK,
@@ -382,7 +382,7 @@ async def update_info_group(info_group: RequestCreateGroup,
 
 
 @router.delete(
-    path="/group/{conversation_code}/users",
+    path="/group/conversation/{conversation_code}",
     name="remove_users_from_group",
     description="Remove users from a group",
     status_code=HTTP_200_OK,
