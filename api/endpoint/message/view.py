@@ -18,7 +18,7 @@ from api.third_parties.database.query.conversation import get_conversation_by_co
 from api.third_parties.database.query.group import get_group_by_code
 from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
     get_all_message_by_conversation_code, get_message_id, create_message_group
-from api.third_parties.database.query.user import get_user_by_code
+from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
 from api.third_parties.socket.socket import sio_server
 from settings.init_project import open_api_standard_responses, http_exception
 
@@ -59,11 +59,12 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         new_message = await create_message(message_data)
         max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
         await update_stt_conversation(conversation_code, max_stt)
-        new_message_id = await get_message_id(new_message)
+        new_message_info = await get_message_id(new_message)
         # await sio_server.emit("receiveNewMess", new_message_id, room=new_message_id.conversation_code)
-
+        sender_info = await get_user_by_code(new_message_info['sender_code'])
+        new_message_info['sender_info'] = sender_info
         response = {
-            "data": new_message_id,
+            "data": new_message_info,
             "response_status": {
                 "code": CODE_SUCCESS,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
@@ -90,15 +91,34 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_message(conversation_code: str, last_message_id: str = Query(default="")):
+async def get_all_message( conversation_code: str, user: dict = Depends(get_current_user), last_message_id: str = Query(default=""), ):
+    code = message = status_code = ''
     try:
         if not conversation_code:
             return http_exception(status_code=HTTP_400_BAD_REQUEST, message='conversation_code not allow empty')
+        conversation = await get_conversation_by_code(conversation_code)
+        if not conversation:
+            code = CODE_ERROR_CONVERSATION_CODE_NOT_FOUND
+            status_code = 400
+            raise HTTPException(status_code)
         list_mess_cursor = await get_all_message_by_conversation_code(
             conversation_code=conversation_code,
             last_message_id=last_message_id
         )
         list_mess = await list_mess_cursor.to_list(None)
+        list_other_memeber = conversation['members']
+        list_other_memeber.remove(user['user_code'])
+        all_memeber_info_cursor = await get_list_user_by_code(list_other_memeber)
+        all_memeber_info = await all_memeber_info_cursor.to_list(None)
+        user_code__user_info = {}
+        for user_info in all_memeber_info:
+            user_code__user_info[user_info['user_code']] = user
+        for mess in list_mess:
+            if mess['sender_code'] != user['user_code']:
+                if mess['sender_code'] in user_code__user_info:
+                    mess['sender_info'] = user_code__user_info[mess['sender_code']]
+            else:
+                mess['sender_info'] = user
         last_conversation_id = ObjectId("                        ")
         if list_mess:
             last_conversation = list_mess[-1]
