@@ -5,7 +5,7 @@ from api.third_parties.database.model.base import BaseModel
 
 class Conversation(BaseModel):
 
-    def __init__(self, stt=0, conversation_code=None, name="",  members=[], type="0"):
+    def __init__(self, stt=0, conversation_code=None, name="", members=[], type="0"):
         super().__init__()
         self.stt = stt
         self.conversation_code = conversation_code

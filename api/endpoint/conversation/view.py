@@ -18,7 +18,7 @@ from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, update_group, \
     get_all_conversation_of_current_user, create_conversation, get_conversation_by_members, get_conversation_by_id, \
-    get_group_by_name, del_user_from_group
+    get_group_by_name, del_user_from_group, update_group_name
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
 from api.third_parties.database.query.user_online import get_user_if_user_is_online
 from settings.init_project import open_api_standard_responses, http_exception
@@ -317,13 +317,6 @@ async def update_info_group(info_group: RequestCreateGroup,
             message = "user not allow empty"
             raise HTTPException(status_code)
 
-        new_user_code = info_group.list_user_to_chat
-        if not new_user_code:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_INPUT
-            message = 'list_new_user_code not allow empty'
-            raise HTTPException(status_code)
-
         group = await get_conversation_by_code(conversation_code)
         if not group:
             status_code = HTTP_400_BAD_REQUEST
@@ -331,38 +324,52 @@ async def update_info_group(info_group: RequestCreateGroup,
             raise HTTPException(status_code)
 
         existing_members = group['members']
+        print("existing_members", existing_members)
         duplicate_members = []
         existing_name = group['name']
 
-        # Kiểm tra xem các user có tồn tại không
-        for user_code in info_group.list_user_to_chat:
-            user = await get_user_by_code(user_code)
-            if not user:
+        # Kiểm tra nếu người dùng chỉ muốn đổi tên nhóm
+        if not info_group.list_user_to_chat:
+            new_name_group = info_group.name if info_group.name else existing_name
+            updated_group = await update_group_name(conversation_code, new_name_group)
+
+        else:
+            new_user_code = info_group.list_user_to_chat
+            if not new_user_code:
                 status_code = HTTP_400_BAD_REQUEST
-                code = CODE_ERROR_USER_CODE_NOT_FOUND
+                code = CODE_ERROR_INPUT
+                message = 'list_new_user_code not allow empty'
                 raise HTTPException(status_code)
 
-            # Kiểm tra xem các user có trong group không
-            if user_code in existing_members:
-                duplicate_members.append(user_code)
+            # Kiểm tra xem các user có tồn tại không
+            for user_code in info_group.list_user_to_chat:
+                user = await get_user_by_code(user_code)
+                if not user:
+                    status_code = HTTP_400_BAD_REQUEST
+                    code = CODE_ERROR_USER_CODE_NOT_FOUND
+                    raise HTTPException(status_code)
 
-            else:
-                # Thêm user_code vào danh sách thành viên
-                group['members'].append(user_code)
+                # Kiểm tra xem các user có trong group không
+                if user_code in existing_members:
+                    duplicate_members.append(user_code)
 
-        if duplicate_members:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_INPUT
-            message = f"User code = {', '.join(duplicate_members)} already exists in the group"
-            raise HTTPException(status_code)
+                else:
+                    # Thêm user_code vào danh sách thành viên
+                    group['members'].append(user_code)
 
-        new_name = info_group.name if info_group.name else existing_name
+            if duplicate_members:
+                status_code = HTTP_400_BAD_REQUEST
+                code = CODE_ERROR_INPUT
+                message = f"User code = {', '.join(duplicate_members)} already exists in the group"
+                raise HTTPException(status_code)
 
-        updated_group = await update_group(group['members'], conversation_code, new_name)
-        if not updated_group:
-            status_code = HTTP_400_BAD_REQUEST
-            code = CODE_ERROR_WHEN_UPDATE_CREATE_GROUP
-            raise HTTPException(status_code)
+            new_name_group = info_group.name if info_group.name else existing_name
+
+            updated_group = await update_group(group['members'], conversation_code, new_name_group)
+            if not updated_group:
+                status_code = HTTP_400_BAD_REQUEST
+                code = CODE_ERROR_WHEN_UPDATE_CREATE_GROUP
+                raise HTTPException(status_code)
 
         response = {
             "data": updated_group,

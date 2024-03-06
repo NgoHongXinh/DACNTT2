@@ -52,6 +52,16 @@ async def update_group(members, conversation_code, name):
     return result
 
 
+async def update_group_name(conversation_code, name):
+    db = await MongoDBService().get_db()
+    result = await db['conversation'].find_one_and_update(
+        {"conversation_code": conversation_code},
+        {"$set": {"name": name}},
+        return_document=ReturnDocument.AFTER
+    )
+    return result
+
+
 async def del_user_from_group(members, conversation_code):
     db = await MongoDBService().get_db()
     result = await db['conversation'].find_one_and_update(
@@ -69,4 +79,4 @@ async def get_max_stt(user_code):
 
 async def update_stt_conversation(conversation_code, new_stt):
     db = await MongoDBService().get_db()
-    return db['conversation'].find_one_and_update( {"conversation_code": conversation_code},{"$set": {"stt": new_stt}},)
+    return db['conversation'].find_one_and_update({"conversation_code": conversation_code}, {"$set": {"stt": new_stt}},)
