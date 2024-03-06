@@ -15,7 +15,7 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, \
-    get_all_conversation_of_current_user, create_conversation, get_conversation_by_members
+    get_all_conversation_of_current_user, create_conversation, get_conversation_by_members, get_conversation_by_id
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
 from api.third_parties.database.query.user_online import get_user_if_user_is_online
 from settings.init_project import open_api_standard_responses, http_exception

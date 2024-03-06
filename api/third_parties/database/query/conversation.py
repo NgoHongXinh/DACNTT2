@@ -1,3 +1,5 @@
+from pymongo import ReturnDocument
+
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.mongodb import MongoDBService, is_valid_object_id
 from api.third_parties.database.query.paging import paging_sort_by_create_time, paging
@@ -6,6 +8,11 @@ from api.third_parties.database.query.paging import paging_sort_by_create_time, 
 async def get_conversation_by_code(conversation_code):
     db = await MongoDBService().get_db()
     return await db['conversation'].find_one({"conversation_code": conversation_code})
+
+
+async def get_conversation_by_id(conversation_id):
+    db = await MongoDBService().get_db()
+    return await db['conversation'].find_one({"_id": is_valid_object_id(conversation_id)})
 
 
 async def get_all_conversation_of_current_user(user_code: str, last_conversation_id=""):
@@ -30,3 +37,26 @@ async def get_conversation_by_members(members):
     return await db['conversation'].find_one({"members": {"$all": members}})
 
 
+async def get_group_by_name(name):
+    db = await MongoDBService().get_db()
+    return await db['conversation'].find_one({"name": name})
+
+
+async def add_user_to_group(members, conversation_code):
+    db = await MongoDBService().get_db()
+    result = await db['conversation'].find_one_and_update(
+        {"conversation_code": conversation_code},
+        {"$set": {"members": members}},
+        return_document=ReturnDocument.AFTER
+    )
+    return result
+
+
+async def del_user_from_group(members, conversation_code):
+    db = await MongoDBService().get_db()
+    result = await db['conversation'].find_one_and_update(
+        {"conversation_code": conversation_code},
+        {"$set": {"members": members}},
+        return_document=ReturnDocument.AFTER
+    )
+    return result

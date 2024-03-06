@@ -6,7 +6,7 @@ from api.third_parties.database.mongodb import PyObjectId
 
 
 class ResponseGroup(BaseModel):
-    group_code: str = Field("", example='')
+    conversation_code: str = Field("", example='')
     name: str = Field("", example='')
     members: List[str] = Field([], example=['list_user_to_chat', 'current_user_code'])
 
@@ -20,3 +20,11 @@ class RequestCreateGroup(BaseModel):
 class ResponseListGroup(BaseModel):
     list_group_info: List[ResponseGroup] = Field(...)
     last_group_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_group_id")
+
+
+class RequestUpdateUser(BaseModel):
+    list_user_code: List[str] = Field([], example=['user1', 'user2'])
+    # conversation_code: str = Field("", example='')
+
+
+
