@@ -2,6 +2,7 @@
 from passlib.context import CryptContext
 
 from api.library.constant import FRIEND, PENDDING, NOT_FRIEND, WAIT_ACCEPT
+from api.third_parties.database.query.conversation import get_max_stt
 from api.third_parties.database.query.friend_request import get_friend
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -32,3 +33,12 @@ async def check_friend_or_not_in_profile(current_user, user_code_check, list_fri
         return NOT_FRIEND
 
 
+
+async def get_max_stt_and_caculate_in_convertsation(user_code):
+    max_stt = await get_max_stt(user_code)
+    max_stt = await max_stt.to_list(None)
+    if max_stt:
+        max_value = max_stt[0]['stt']
+        max_value = max_value+1
+        return max_value
+    return 0

@@ -20,7 +20,7 @@ async def get_all_message_by_conversation_code(conversation_code: str, last_mess
         database_name="message",
         query_condition={"conversation_code": conversation_code},
         db=db,
-        sort=1)
+        sort=-1)
     return list_mess_cursor
 
 

@@ -42,11 +42,11 @@ async def get_group_by_name(name):
     return await db['conversation'].find_one({"name": name})
 
 
-async def add_user_to_group(members, conversation_code):
+async def update_group(members, conversation_code, name):
     db = await MongoDBService().get_db()
     result = await db['conversation'].find_one_and_update(
         {"conversation_code": conversation_code},
-        {"$set": {"members": members}},
+        {"$set": {"members": members, "name": name}},
         return_document=ReturnDocument.AFTER
     )
     return result
@@ -60,3 +60,13 @@ async def del_user_from_group(members, conversation_code):
         return_document=ReturnDocument.AFTER
     )
     return result
+
+
+async def get_max_stt(user_code):
+    db = await MongoDBService().get_db()
+    return db['conversation'].find({"members": {"$in": [user_code]}}).sort("stt", -1).limit(1)
+
+
+async def update_stt_conversation(conversation_code, new_stt):
+    db = await MongoDBService().get_db()
+    return db['conversation'].find_one_and_update( {"conversation_code": conversation_code},{"$set": {"stt": new_stt}},)

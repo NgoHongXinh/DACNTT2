@@ -1,4 +1,10 @@
+from typing import List
+
 from pydantic import BaseModel,  Field
+
+from api.third_parties.database.mongodb import PyObjectId
+
+
 # from bson import ObjectId
 # from api.base.schema import CommonModel
 # from api.third_parties.database.model.base import BaseModel
@@ -11,15 +17,14 @@ class ResponseMessage(BaseModel):
     text: str = Field("", example='')
 
 
+class ResponseListMessage(BaseModel):
+    list_mess_info: List[ResponseMessage] = Field(...)
+    last_mess_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_mess_id")
+
+
 class RequestCreateMessage(BaseModel):
     conversation_code: str = Field("", example='')
-    sender_code: str = Field("", example='')
-    text: str = Field("", example='')
-
-
-class RequestCreateMessageGroup(BaseModel):
-    conversation_code: str = Field("", example='')
-    sender_code: str = Field("", example='')
+    # sender_code: str = Field("", example='')
     text: str = Field("", example='')
 
 

@@ -17,7 +17,6 @@ class ResponseCreateConversation(BaseModel):
 
 class RequestCreateConversation(BaseModel):
     user_code_to_chat: str = Field("", example='')  # user_code of user to chat
-    # current_user_code: str = Field("", example='')  # user_code of current user
 
 
 class ResponseConversationHaveMemInfo(BaseModel):
@@ -42,8 +41,34 @@ class ResponseConversationHaveMemInfo(BaseModel):
                         "gender": "Nam"
                     }])
     online: bool = Field(..., example=True)
+    type: str = Field("", example='')
 
 
 class ResponseListConversation(BaseModel):
     list_conversation_info: List[ResponseConversationHaveMemInfo] = Field(...)
     last_conversation_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_conversation_id")
+
+
+class ResponseGroup(BaseModel):
+    conversation_code: str = Field("", example='')
+    name: str = Field("", example='')
+    members: List[str] = Field([], example=['list_user_to_chat', 'current_user_code'])
+    type: str = Field("", example='')
+
+
+class ResponseCreateGroup(BaseModel):
+    conversation_code: str = Field("", example='')
+    message: str = Field("", example='')
+    name: str = Field("", example='')
+    members: List[str] = Field([], example=['list_user_to_chat', 'current_user_code'])
+    type: str = Field("", example='')
+
+
+class RequestCreateGroup(BaseModel):
+    list_user_to_chat: List[str] = Field([], example=['user1', 'user2'])
+    name: str = Field("", example='')
+
+
+
+
+
