@@ -34,12 +34,21 @@ async def create_conversation(data: Conversation):
 
 async def get_conversation_by_members(members):
     db = await MongoDBService().get_db()
-    return await db['conversation'].find_one({"members": {"$all": members}})
+    # Lấy số lượng phần tử trong danh sách members
+    members_count = len(members)
+    # Sắp xếp các phần tử trong danh sách members để đảm bảo thứ tự giống nhau
+    members.sort()
+    return await db['conversation'].find_one({
+        "members": {
+            "$all": members,
+            "$size": members_count
+        }
+    })
 
 
-async def get_group_by_name(name):
+async def get_conversation_by_members_and_name(members, name):
     db = await MongoDBService().get_db()
-    return await db['conversation'].find_one({"name": name})
+    return await db['conversation'].find_one({"members": {"$all": members}}, {"name": name})
 
 
 async def update_group(members, conversation_code, name):
