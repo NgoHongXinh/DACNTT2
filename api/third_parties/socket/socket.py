@@ -52,7 +52,9 @@ async def join_room(sid, data):
     # sio_server.enter_room(sid, 'chat_users')
     sio_server.enter_room(sid, data)
 
-
+@sio_server.on("leave_room")
+def exit_room(sid, room_id):
+    sio_server.leave_room(sid, room_id)
 @sio_server.event
 async def send_mess_room(event, room, data):
     await sio_server.emit(event, data, room=room)

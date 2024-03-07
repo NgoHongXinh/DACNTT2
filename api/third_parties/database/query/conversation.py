@@ -15,14 +15,16 @@ async def get_conversation_by_id(conversation_id):
     return await db['conversation'].find_one({"_id": is_valid_object_id(conversation_id)})
 
 
-async def get_all_conversation_of_current_user(user_code: str, last_conversation_id=""):
+async def get_all_conversation_of_current_user(user_code: str, last_conversation_stt=""):
     db = await MongoDBService().get_db()
     list_conversation_cursor = await paging(
-        query_param_for_paging=last_conversation_id,
+        query_param_for_paging=last_conversation_stt,
         database_name="conversation",
         query_condition={"members": {"$in": [user_code]}},
         db=db,
-        sort=1)
+        sort=-1,
+        is_conversation=True
+    )
     return list_conversation_cursor
 
 

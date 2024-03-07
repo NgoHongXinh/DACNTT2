@@ -77,7 +77,7 @@ async def get_conversation(conversation_code: str):
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_all_conversation(user: dict = Depends(get_current_user), last_conversation_ids: str = Query(default="")):
+async def get_all_conversation(user: dict = Depends(get_current_user), last_conversation_stt: str = Query(default="")):
     code = message = status_code = ''
     try:
         if not user:
@@ -88,7 +88,7 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_conv
 
         list_conversation_cursor = await get_all_conversation_of_current_user(
             user_code=user['user_code'],
-            last_conversation_id=last_conversation_ids
+            last_conversation_stt=last_conversation_stt
         )
         list_conversation_cursor = await list_conversation_cursor.to_list(None)
 
@@ -106,16 +106,16 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_conv
                         conversation['online'] = True
                     conversation['members_obj'].append(user_member)
 
-        last_conversation_id = ObjectId("                        ")
+        last_conversation_stt = 0
         if list_conversation_cursor:
             last_conversation = list_conversation_cursor[-1]
-            last_conversation_id = last_conversation['_id']
+            last_conversation_id = last_conversation['stt']
 
         response = {
             "data":
                 {
                     "list_conversation_info": list_conversation_cursor,
-                    "last_conversation_id": last_conversation_id
+                    "last_conversation_stt": last_conversation_id
                 },
             "response_status": {
                 "code": CODE_SUCCESS,
