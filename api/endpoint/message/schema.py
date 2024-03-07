@@ -17,9 +17,12 @@ class ResponseMessage(BaseModel):
     sender_code: str = Field("", example='')
     text: str = Field("", example='')
     sender_info: ResponseUser = Field()
+
+
 class ResponseListMessage(BaseModel):
     list_mess_info: List[ResponseMessage] = Field(...)
     last_mess_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_mess_id")
+
 
 class RequestCreateMessage(BaseModel):
     conversation_code: str = Field("", example='')
@@ -27,14 +30,8 @@ class RequestCreateMessage(BaseModel):
     text: str = Field("", example='')
 
 
-class RequestCreateMessageGroup(BaseModel):
-    group_code: str = Field("", example='')
-    sender_code: str = Field("", example='')
-    text: str = Field("", example='')
-
-
 class ResponseGroupMessage(BaseModel):
     message_code: str = Field("", example='')
-    group_code: str = Field("", example='')
+    conversation_code: str = Field("", example='')
     sender_code: str = Field("", example='')
     text: str = Field("", example='')
