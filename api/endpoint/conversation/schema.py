@@ -109,6 +109,10 @@ class RequestCreateGroup(BaseModel):
     name: str = Field("", example='')
 
 
+class RequestDeleteGroup(BaseModel):
+    list_user_to_chat: List[str] = Field([], example=['user1', 'user2'])
+
+
 
 
 

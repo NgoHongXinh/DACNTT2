@@ -48,7 +48,12 @@ async def get_conversation_by_members(members):
 
 async def get_conversation_by_members_and_name(members, name):
     db = await MongoDBService().get_db()
-    return await db['conversation'].find_one({"members": {"$all": members}}, {"name": name})
+    return await db['conversation'].find_one({"members": {"$all": members}, "name": name})
+
+
+async def get_group_by_name(name):
+    db = await MongoDBService().get_db()
+    return await db['conversation'].find_one({"name": name})
 
 
 async def update_group(members, conversation_code, name):
@@ -66,16 +71,6 @@ async def update_group_name(conversation_code, name):
     result = await db['conversation'].find_one_and_update(
         {"conversation_code": conversation_code},
         {"$set": {"name": name}},
-        return_document=ReturnDocument.AFTER
-    )
-    return result
-
-
-async def del_user_from_group(members, conversation_code):
-    db = await MongoDBService().get_db()
-    result = await db['conversation'].find_one_and_update(
-        {"conversation_code": conversation_code},
-        {"$set": {"members": members}},
         return_document=ReturnDocument.AFTER
     )
     return result
