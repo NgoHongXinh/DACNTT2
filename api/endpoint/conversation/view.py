@@ -250,9 +250,19 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
         # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
         existing_group = await get_conversation_by_members(members)
         if existing_group:
-            existing_group_name = await get_group_by_name(
-                user_chat.name)  # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
+            # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
+            existing_group_name = await get_group_by_name(user_chat.name)
             if existing_group_name:
+                existing_group_name['members_obj'] = []
+                existing_group_name['online'] = False
+                for member in existing_group_name['members']:
+                    if member != user['user_code']:
+                        user_member = await get_user_by_code(member)
+                        get_other_user_if_online = await get_user_if_user_is_online(member)
+                        if get_other_user_if_online:
+                            existing_group_name['online'] = True
+                        existing_group_name['members_obj'].append(user_member)
+
                 return SuccessResponse[ResponseGroup](**{
                     "data": existing_group_name,
                     "response_status": {
@@ -475,10 +485,10 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestDelet
 
         # Kiểm tra số lượng thành viên còn lại trong nhóm
         remaining_members = group['members']
-        if len(remaining_members) < 1:
+        if len(remaining_members) < 2:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
-            message = "Group must have at least 1 members"
+            message = "Group must have at least 2 members"
             raise HTTPException(status_code)
 
         updated_group = await update_group(remaining_members, conversation_code, group['name'])
