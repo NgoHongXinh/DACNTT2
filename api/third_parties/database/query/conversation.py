@@ -48,7 +48,15 @@ async def get_conversation_by_members(members):
 
 async def get_conversation_by_members_and_name(members, name):
     db = await MongoDBService().get_db()
-    return await db['conversation'].find_one({"members": {"$all": members}, "name": name})
+    members_count = len(members)
+    members.sort()
+    return await db['conversation'].find_one({
+        "members": {
+            "$all": members,
+            "$size": members_count
+        },
+        "name": name
+    })
 
 
 async def get_group_by_name(name):

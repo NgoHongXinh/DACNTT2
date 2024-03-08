@@ -248,28 +248,25 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
         members.extend(user_code_chat)
 
         # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
-        existing_group = await get_conversation_by_members(members)
-        if existing_group:
-            # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
-            existing_group_name = await get_group_by_name(user_chat.name)
-            if existing_group_name:
-                existing_group_name['members_obj'] = []
-                existing_group_name['online'] = False
-                for member in existing_group_name['members']:
-                    if member != user['user_code']:
-                        user_member = await get_user_by_code(member)
-                        get_other_user_if_online = await get_user_if_user_is_online(member)
-                        if get_other_user_if_online:
-                            existing_group_name['online'] = True
-                        existing_group_name['members_obj'].append(user_member)
+        existing_group_name = await get_conversation_by_members_and_name(members, user_chat.name)
+        if existing_group_name:
+            existing_group_name['members_obj'] = []
+            existing_group_name['online'] = False
+            for member in existing_group_name['members']:
+                if member != user['user_code']:
+                    user_member = await get_user_by_code(member)
+                    get_other_user_if_online = await get_user_if_user_is_online(member)
+                    if get_other_user_if_online:
+                        existing_group_name['online'] = True
+                    existing_group_name['members_obj'].append(user_member)
 
-                return SuccessResponse[ResponseGroup](**{
-                    "data": existing_group_name,
-                    "response_status": {
-                        "code": CODE_SUCCESS,
-                        "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-                    }
-                })
+            return SuccessResponse[ResponseGroup](**{
+                "data": existing_group_name,
+                "response_status": {
+                    "code": CODE_SUCCESS,
+                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+                }
+            })
 
         # Nếu group chưa tồn tại thì tạo mới
         max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
