@@ -11,14 +11,14 @@ from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.message.schema import ResponseMessage, RequestCreateMessage, \
      ResponseListMessage
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
-    CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_CONVERSATION_CODE_NOT_FOUND
+    CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_CONVERSATION_CODE_NOT_FOUND, EVENT_CHAT
 from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.message import Message, MessageGroup
 from api.third_parties.database.query.conversation import get_conversation_by_code, update_stt_conversation
 from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
     get_all_message_by_conversation_code, get_message_id, create_message_group
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
-from api.third_parties.socket.socket import sio_server
+from api.third_parties.socket.socket import sio_server, send_mess_room
 from settings.init_project import open_api_standard_responses, http_exception
 
 router = APIRouter()
@@ -60,7 +60,7 @@ async def create_a_message(request_message_data: RequestCreateMessage,
         max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
         await update_stt_conversation(conversation_code, max_stt)
         new_message_info = await get_message_id(new_message)
-        # await sio_server.emit("receiveNewMess", new_message_id, room=new_message_id.conversation_code)
+        await send_mess_room(event=EVENT_CHAT,data=jsonable_encoder(SuccessResponse[ResponseComment](**response)), room=conversation_code)
         sender_info = await get_user_by_code(new_message_info['sender_code'])
         new_message_info['sender_info'] = sender_info
         response = {

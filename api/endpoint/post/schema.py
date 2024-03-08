@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,19 @@ class ResponsePost(BaseModel):
     liked_by: List[str] = Field([], example=[''])
     comment_post: List[str] = Field([], example=[''])
     root_post: str = Field("", example='', description="bài gốc của bài được chia sẻ")
+    videos: str = Field("", example='')
+    video_ids: str = Field("", example='')
+
+class ResponseListSharePost(BaseModel):
+    post_code: str = Field("", example='')
+    created_by: ResponseUser = Field()
+    content: str = Field("", example='')
+    images: List[str] = Field([], example=[''])
+    images_id: List[str] = Field([], example=[''])
+    liked_by: List[str] = Field([], example=[''])
+    comment_post: List[str] = Field([], example=[''])
+    root_post: str = Field("", example='', description="bài gốc của bài được chia sẻ")
+    root_post_info: Optional[ResponsePost] = Field(None)
     videos: str = Field("", example='')
     video_ids: str = Field("", example='')
 
@@ -52,6 +65,10 @@ class ResponseSharePost(BaseModel):
 
 
 class ResponseListPost(BaseModel):
-    list_post_info: List[ResponsePost] = Field(...)
+    list_post_info: List[ResponseListSharePost] = Field(...)
 
     last_post_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_post_id")
+
+
+class CreateSharePost(BaseModel):
+    content: str = Field("", example='')

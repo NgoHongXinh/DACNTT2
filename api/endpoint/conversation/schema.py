@@ -46,7 +46,7 @@ class ResponseConversationHaveMemInfo(BaseModel):
 
 class ResponseListConversation(BaseModel):
     list_conversation_info: List[ResponseConversationHaveMemInfo] = Field(...)
-    last_conversation_id: PyObjectId = Field(default_factory=PyObjectId, alias="last_conversation_id")
+    last_conversation_stt: int = Field(0, alias="last_conversation_stt")
 
 
 class ResponseGroup(BaseModel):

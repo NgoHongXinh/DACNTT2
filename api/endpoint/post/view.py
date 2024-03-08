@@ -12,7 +12,7 @@ from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_DELETE_POST
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.post.schema import ResponsePost, ResponseCreateUpdatePost, ResponseLikePost, ResponseSharePost, \
-    ResponseDeletePost, ResponseListPost
+    ResponseDeletePost, ResponseListPost, CreateSharePost, ResponseListSharePost
 from api.third_parties.cloud.query import upload_image_cloud, delete_image, upload_video
 from api.third_parties.database.model.notification import Notification
 from api.third_parties.database.model.post import Post
@@ -119,6 +119,12 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
         list_post_cursor = await list_post_cursor.to_list(None)
 
         for post in list_post_cursor:
+            post['root_post_info'] = None
+            if "root_post" in post and post['root_post']:
+                post['root_post_info'] = await get_post_by_post_code(post['root_post'])
+                if post['root_post_info']['created_by']:
+                    user_root_post_info = await user_query.get_user_by_code(post['root_post_info']['created_by'])
+                    post['root_post_info']['created_by'] = user_root_post_info
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
             post['liked_by'] = list(post['liked_by'])
@@ -543,7 +549,7 @@ async def like_post(post_code: str, user: dict = Depends(get_current_user)):
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def create_share_post(post_code: str, user: dict = Depends(get_current_user)):
+async def create_share_post(post_code: str, createSharePost: CreateSharePost,  user: dict = Depends(get_current_user)):
     status_code = code = message = ""
     try:
         if not user:
@@ -564,22 +570,21 @@ async def create_share_post(post_code: str, user: dict = Depends(get_current_use
         # nếu bài viết là bài đã được share lại của người khác thì nhâ share sẽ share bài gốc
         # B SHARE A, C SHARE BÀI MÀ B ĐÃ SHARE CỦA A => BÀI GỐC LÀ A
         post_exist = await get_post_of_user_by_code(user['user_code'], post_code)
-        print(post_exist)
         if post_exist:
             message = "Bạn đã share bài viết này"
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
-        print(post)
         post_data = Post(
             post_code=str(uuid.uuid4()),
-            content=post['content'],
-            image_ids=post['image_ids'],
-            images=post['images'],
-            video_ids=post['video_ids'],
-            videos=post['videos'],
+            content=createSharePost.content,
+            image_ids=[],
+            images=[],
+            video_ids=[],
+            videos=[],
             root_post=post['post_code'],
-            created_by=user['user_code']
+            created_by=user['user_code'],
+            user_root_post=post['created_by']
         )
         new_share_post = await post_query.create_post(post_data)
         if new_share_post:
