@@ -41,7 +41,7 @@ async def get_conversation_by_members(members):
     return await db['conversation'].find_one({
         "members": {
             "$all": members,
-            "$size": members_count
+            "$size": members_count  # Đảm bảo số lượng phần tử trong danh sách members giống nhau
         }
     })
 
