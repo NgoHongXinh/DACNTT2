@@ -1,23 +1,25 @@
 import logging
 import uuid
-from typing import List
+
 
 from bson import ObjectId
+from fastapi.encoders import jsonable_encoder
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
-from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.message.schema import ResponseMessage, RequestCreateMessage, \
      ResponseListMessage
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
-    CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_CONVERSATION_CODE_NOT_FOUND, EVENT_CHAT
+    CODE_ERROR_CONVERSATION_CODE_NOT_FOUND, EVENT_CHAT
 from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.message import Message, MessageGroup
 from api.third_parties.database.query.conversation import get_conversation_by_code, update_stt_conversation
 from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
     get_all_message_by_conversation_code, get_message_id, create_message_group
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
+from api.third_parties.database.query.user_online import get_user_if_user_is_online
 from api.third_parties.socket.socket import sio_server, send_mess_room
 from settings.init_project import open_api_standard_responses, http_exception
 
@@ -44,6 +46,7 @@ async def create_a_message(request_message_data: RequestCreateMessage,
 
         conversation_code = request_message_data.conversation_code
         conversation = await get_conversation_by_code(conversation_code)
+        print(conversation_code)
         if not conversation:
             status_code = HTTP_400_BAD_REQUEST
             code = CODE_ERROR_CONVERSATION_CODE_NOT_FOUND
@@ -53,15 +56,17 @@ async def create_a_message(request_message_data: RequestCreateMessage,
             message_code=str(uuid.uuid4()),
             conversation_code=conversation_code,
             sender_code=user['user_code'],
-            text=request_message_data.text
+            text=request_message_data.text,
+            # stt=await get_max_stt_caculate_in_message(conversation_code)
         )
 
         new_message = await create_message(message_data)
         max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
+
         await update_stt_conversation(conversation_code, max_stt)
         new_message_info = await get_message_id(new_message)
-        await send_mess_room(event=EVENT_CHAT,data=jsonable_encoder(SuccessResponse[ResponseComment](**response)), room=conversation_code)
         sender_info = await get_user_by_code(new_message_info['sender_code'])
+
         new_message_info['sender_info'] = sender_info
         response = {
 
@@ -71,6 +76,13 @@ async def create_a_message(request_message_data: RequestCreateMessage,
                 "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
             }
         }
+        for member in conversation['members']:
+            print(member)
+            if member != user['user_code']:
+                get_other_user_if_online = await get_user_if_user_is_online(member)
+                if get_other_user_if_online:
+                    await send_mess_room(event=EVENT_CHAT,data=jsonable_encoder(SuccessResponse[ResponseMessage](**response)), room=conversation_code)
+
         return SuccessResponse[ResponseMessage](**response)
     except:
         logger.error(TYPE_MESSAGE_RESPONSE["en"][code] if not message else message, exc_info=True)

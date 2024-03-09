@@ -11,6 +11,7 @@ class Message(BaseModel):
         self.conversation_code = conversation_code  # conversation_code của cuộc trò chuyện
         self.sender_code = sender_code  # user_code của người gửi
         self.text = text  # nội dung tin nhắn
+        # self.stt = stt
 
     def to_json(self):
         data = self.__dict__

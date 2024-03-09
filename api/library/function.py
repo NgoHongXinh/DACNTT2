@@ -42,3 +42,13 @@ async def get_max_stt_and_caculate_in_convertsation(user_code):
         max_value = max_value+1
         return max_value
     return 0
+
+#
+# async def get_max_stt_caculate_in_message(conversation_code):
+#     max_stt = await get_max_stt_of_message_in_conver(conversation_code)
+#     max_stt = await max_stt.to_list(None)
+#     if max_stt:
+#         max_value = max_stt[0]['stt']
+#         max_value = max_value+1
+#         return max_value
+#     return 0
