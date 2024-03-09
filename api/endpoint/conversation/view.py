@@ -10,7 +10,7 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_500_INTERNA
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
 from api.endpoint.conversation.schema import ResponseConversation, RequestCreateConversation, ResponseListConversation, \
-    ResponseCreateConversation, ResponseCreateGroup, RequestCreateGroup, ResponseGroup
+    ResponseCreateConversation, ResponseCreateGroup, RequestCreateGroup, ResponseGroup, RequestDeleteGroup
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
     CODE_ERROR_USER_CODE_NOT_FOUND, CODE_ERROR_WHEN_UPDATE_CREATE_CONVERSATION, CODE_ERROR_WHEN_UPDATE_CREATE_GROUP, \
     CODE_ERROR_CONVERSATION_CODE_NOT_FOUND
@@ -18,7 +18,7 @@ from api.library.function import get_max_stt_and_caculate_in_convertsation
 from api.third_parties.database.model.conversation import Conversation
 from api.third_parties.database.query.conversation import get_conversation_by_code, update_group, \
     get_all_conversation_of_current_user, create_conversation, get_conversation_by_members, get_conversation_by_id, \
-    get_group_by_name, del_user_from_group, update_group_name
+    get_conversation_by_members_and_name, update_group_name, get_group_by_name
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
 from api.third_parties.database.query.user_online import get_user_if_user_is_online
 from settings.init_project import open_api_standard_responses, http_exception
@@ -247,18 +247,26 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
         members = [user['user_code']]
         members.extend(user_code_chat)
 
-        # Kiểm tra xem conversation đã tồn tại chưa
-        existing_group = await get_conversation_by_members(members)
-        if existing_group:
-            existing_group_name = await get_group_by_name(user_chat.name)  # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
-            if existing_group_name:
-                return SuccessResponse[ResponseGroup](**{
-                    "data": existing_group_name,
-                    "response_status": {
-                        "code": CODE_SUCCESS,
-                        "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
-                    }
-                })
+        # Kiểm tra xem group đã tồn tại chưa nếu có thì trả về group đó
+        existing_group_name = await get_conversation_by_members_and_name(members, user_chat.name)
+        if existing_group_name:
+            existing_group_name['members_obj'] = []
+            existing_group_name['online'] = False
+            for member in existing_group_name['members']:
+                if member != user['user_code']:
+                    user_member = await get_user_by_code(member)
+                    get_other_user_if_online = await get_user_if_user_is_online(member)
+                    if get_other_user_if_online:
+                        existing_group_name['online'] = True
+                    existing_group_name['members_obj'].append(user_member)
+
+            return SuccessResponse[ResponseGroup](**{
+                "data": existing_group_name,
+                "response_status": {
+                    "code": CODE_SUCCESS,
+                    "message": TYPE_MESSAGE_RESPONSE["en"][CODE_SUCCESS],
+                }
+            })
 
         # Nếu group chưa tồn tại thì tạo mới
         max_stt = await get_max_stt_and_caculate_in_convertsation(user['user_code'])
@@ -277,6 +285,18 @@ async def create_new_group(user_chat: RequestCreateGroup, user: dict = Depends(g
             raise HTTPException(status_code)
 
         new_group = await get_conversation_by_id(group_info)
+
+        new_group['members_obj'] = []
+        new_group['online'] = False
+        for member in new_group['members']:
+            print(member)
+            if member != user['user_code']:
+                user_member = await get_user_by_code(member)
+                get_other_user_if_online = await get_user_if_user_is_online(member)
+                print("vaof", member, get_other_user_if_online)
+                if get_other_user_if_online:
+                    new_group['online'] = True
+                new_group['members_obj'].append(user_member)
 
         response = {
             "data": new_group,
@@ -324,7 +344,6 @@ async def update_info_group(info_group: RequestCreateGroup,
             raise HTTPException(status_code)
 
         existing_members = group['members']
-        print("existing_members", existing_members)
         duplicate_members = []
         existing_name = group['name']
 
@@ -371,6 +390,18 @@ async def update_info_group(info_group: RequestCreateGroup,
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_GROUP
                 raise HTTPException(status_code)
 
+        updated_group['members_obj'] = []
+        updated_group['online'] = False
+        for member in updated_group['members']:
+            print(member)
+            if member != user['user_code']:
+                user_member = await get_user_by_code(member)
+                get_other_user_if_online = await get_user_if_user_is_online(member)
+                print("vaof", member, get_other_user_if_online)
+                if get_other_user_if_online:
+                    updated_group['online'] = True
+                updated_group['members_obj'].append(user_member)
+
         response = {
             "data": updated_group,
             "response_status": {
@@ -399,7 +430,7 @@ async def update_info_group(info_group: RequestCreateGroup,
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def remove_users_from_group(conversation_code: str, del_user: RequestCreateGroup,
+async def remove_users_from_group(conversation_code: str, del_user: RequestDeleteGroup,
                                   user: dict = Depends(get_current_user)):
     code = message = status_code = ''
     try:
@@ -424,6 +455,7 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestCreat
 
         existing_members = group['members']
         empty_members = []
+        members_to_remove = []
 
         # Kiểm tra xem các user có tồn tại không
         for user_code in del_user.list_user_to_chat:
@@ -434,10 +466,10 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestCreat
                 raise HTTPException(status_code)
 
             # Kiểm tra xem các user có trong group không
-            if user_code not in existing_members:
-                empty_members.append(user_code)
+            if user_code in existing_members:
+                members_to_remove.append(user_code)
             else:
-                group['members'].remove(user_code)
+                empty_members.append(user_code)
 
         if empty_members:
             status_code = HTTP_400_BAD_REQUEST
@@ -445,7 +477,35 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestCreat
             message = f"User code = {', '.join(empty_members)} not exists in the group"
             raise HTTPException(status_code)
 
-        updated_group = await del_user_from_group(conversation_code, group['members'])
+        #  Xóa các thành viên chỉ định khỏi danh sách members
+        group['members'] = [member for member in existing_members if member not in members_to_remove]
+
+        # Kiểm tra số lượng thành viên còn lại trong nhóm
+        remaining_members = group['members']
+        if len(remaining_members) < 2:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_INPUT
+            message = "Group must have at least 2 members"
+            raise HTTPException(status_code)
+
+        updated_group = await update_group(remaining_members, conversation_code, group['name'])
+        if not updated_group:
+            status_code = HTTP_400_BAD_REQUEST
+            code = CODE_ERROR_WHEN_UPDATE_CREATE_GROUP
+            raise HTTPException(status_code)
+
+        updated_group['members_obj'] = []
+        updated_group['online'] = False
+        for member in updated_group['members']:
+            print(member)
+            if member != user['user_code']:
+                user_member = await get_user_by_code(member)
+                get_other_user_if_online = await get_user_if_user_is_online(member)
+                print("vaof", member, get_other_user_if_online)
+                if get_other_user_if_online:
+                    updated_group['online'] = True
+                updated_group['members_obj'].append(user_member)
+
         response = {
             "data": updated_group,
             "response_status": {
