@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, UploadFile, Query
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
@@ -125,16 +125,16 @@ async def get_user_profile(user_code: str, user: dict = Depends(get_current_user
 )
 async def update_user_info(
         user_code: str,
-        given_name: str = Form(None),
-        family_name: str = Form(None),
-        biography: str = Form(None),
-        faculty: str = Form(None),
-        birthday: str = Form(None),
-        phone: str = Form(None),
-        gender: str = Form(None),
-        class_name: str = Form(None),
-        picture: UploadFile = Form(None),
-        background_picture: UploadFile = Form(None),
+        given_name: str = Form(""),
+        family_name: str = Form(""),
+        biography: str = Form(""),
+        faculty: str = Form(""),
+        birthday: str = Form(""),
+        phone: str = Form(""),
+        gender: str = Form(""),
+        class_name: str = Form(""),
+        picture: Optional[UploadFile] = Form(""),
+        background_picture: Optional[UploadFile] = Form(""),
         user: dict = Depends(get_current_user)):
     if user_code != user['user_code']:
         return http_exception(status_code=HTTP_400_BAD_REQUEST,
@@ -142,24 +142,45 @@ async def update_user_info(
     data_update = {
 
     }
-    if given_name is not None:
+    print(given_name,family_name )
+    if given_name:
         data_update['given_name'] = given_name
-    if family_name is not None:
+    if family_name:
         data_update['family_name'] = family_name
-    if biography is not None:
+    if biography:
         data_update['biography'] = biography
-    if faculty is not None:
+    if faculty:
         data_update['faculty'] = faculty
-    if birthday is not None:
+    if birthday:
         data_update['birthday'] = birthday
-    if phone is not None:
+    if phone:
         data_update['phone'] = phone
-    if gender is not None:
+    if gender:
         data_update['gender'] = gender
-    if class_name is not None:
+    if class_name:
         data_update['class_name'] = class_name
+    picture_id = ""
+    picture_update = ""
+    background_picture_id =  ""
+    background_picture_update = ""
+    if picture:
+        picture_data = await picture.read()
+        response_picture = await upload_image_cloud(picture_data, user["user_code"])
+        picture_id = response_picture['public_id']
+        picture_update = response_picture['url']
+        data_update['picture_id'] = picture_id
+        data_update['picture'] = picture_update
+    if background_picture:
+        background_picture_data = await background_picture.read()
+        response_back_ground = await upload_image_cloud(background_picture_data, user["user_code"])
+        background_picture_id= response_back_ground['public_id']
+        background_picture_update= response_back_ground['url']
+        data_update['background_picture_id'] = background_picture_id
+        data_update['background_picture'] = background_picture_update
+    print(data_update)
     user_after_update = await update_user(user['_id'], data_update)
-    await upload_image_cloud(await picture.read(), user["user_code"])
+    print("2222222", user_after_update)
+
     if not user_after_update:
         return http_exception(code=CODE_ERROR_WHEN_UPDATE_CREATE,status_code=HTTP_400_BAD_REQUEST)
 

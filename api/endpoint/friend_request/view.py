@@ -116,7 +116,7 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
             raise HTTPException(status_code)
 
         # kiểm tra xem 2 người đã là bạn bè hay chưa
-        if user_want_request_friend in user['friends']:
+        if user_want_request_friend in user['friends_code']:
             status_code = HTTP_400_BAD_REQUEST
             message = f"user code = {user_code_want_request} is already your friend"
             code = CODE_ERROR_INPUT
