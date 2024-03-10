@@ -142,7 +142,6 @@ async def update_user_info(
     data_update = {
 
     }
-    print(given_name,family_name )
     if given_name:
         data_update['given_name'] = given_name
     if family_name:
