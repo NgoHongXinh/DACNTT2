@@ -158,6 +158,9 @@ async def update_user_info(
         data_update['gender'] = gender
     if class_name:
         data_update['class_name'] = class_name
+
+    if given_name and family_name:
+        data_update['fullname'] = family_name + given_name
     picture_id = ""
     picture_update = ""
     background_picture_id =  ""
@@ -172,13 +175,11 @@ async def update_user_info(
     if background_picture:
         background_picture_data = await background_picture.read()
         response_back_ground = await upload_image_cloud(background_picture_data, user["user_code"])
-        background_picture_id= response_back_ground['public_id']
-        background_picture_update= response_back_ground['url']
+        background_picture_id = response_back_ground['public_id']
+        background_picture_update = response_back_ground['url']
         data_update['background_picture_id'] = background_picture_id
         data_update['background_picture'] = background_picture_update
-    print(data_update)
     user_after_update = await update_user(user['_id'], data_update)
-    print("2222222", user_after_update)
 
     if not user_after_update:
         return http_exception(code=CODE_ERROR_WHEN_UPDATE_CREATE,status_code=HTTP_400_BAD_REQUEST)
