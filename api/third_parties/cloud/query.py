@@ -2,8 +2,8 @@ import cloudinary
 import cloudinary.uploader
 from settings.init_project import config_system
 
-DEFAULT_PICTURE_URL = "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062103/DEFAULT/tdt_bg.jpg"
-DEFAULT_BACKGROUND_PICTURE_URL = "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062102/DEFAULT/cat_bg.png"
+DEFAULT_BACKGROUND_PICTURE_URL = "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062103/DEFAULT/tdt_bg.jpg"
+DEFAULT_PICTURE_URL= "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062102/DEFAULT/cat_bg.png"
 
 cloudinary.config(
     cloud_name=config_system['CLOUD_NAME'],
