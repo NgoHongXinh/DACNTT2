@@ -94,10 +94,12 @@ async def get_token_google(info_token: RequestInfoToken):
             user = await get_user_by_email(id_info['email'])
             if not user:
                 # Tạo user mới nếu chưa có
+                picture = await get_default_picture()
                 new_user_data = User(
                     user_code=str(uuid.uuid4()),
                     fullname=id_info['name'],
-                    picture=id_info['picture'] if 'picture' in id_info else await get_default_picture(),
+                    picture=id_info['picture'] if 'picture' in id_info else picture,
+                    # picture=picture,
                     background_picture=await get_default_background_picture(),
                     picture_id="",
                     background_picture_id="",
