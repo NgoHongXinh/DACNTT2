@@ -33,6 +33,7 @@ async def get_list_user_by_code(list_user_code):
     db = await MongoDBService().get_db()
     return db['user'].find({"user_code": {"$in": list_user_code}})
 
+
 async def get_user_by_email(email):
     db = await MongoDBService().get_db()
     return await db['user'].find_one({"username": email})

@@ -11,6 +11,7 @@ from api.endpoint.authen.schema import ResponseToken, RequestInfoToken
 from api.endpoint.user.schema import ResponseUser
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_LOGIN_FAIL, EMAIL_LOGIN_FAIL, \
     CODE_ERROR_SERVER, CODE_TOKEN_NOT_VALID, CREATE_USER_FAIL, CODE_ERROR_INPUT
+from api.third_parties.cloud.query import get_default_picture, get_default_background_picture
 from api.third_parties.database.model.user import User
 from api.third_parties.database.query.user import get_user_by_code, check_user, get_user_by_email, create_new_user, \
     get_user_id
@@ -96,9 +97,10 @@ async def get_token_google(info_token: RequestInfoToken):
                 new_user_data = User(
                     user_code=str(uuid.uuid4()),
                     fullname=id_info['name'],
-                    picture=id_info['picture'],
-                    background_picture="",
+                    picture=id_info['picture'] if 'picture' in id_info else await get_default_picture(),
+                    background_picture=await get_default_background_picture(),
                     picture_id="",
+                    background_picture_id="",
                     given_name=id_info['given_name'],
                     family_name=id_info['family_name'],
                     username=id_info['email'],
@@ -107,7 +109,8 @@ async def get_token_google(info_token: RequestInfoToken):
                     faculty="",
                     friends_code=[],
                     birthday="",
-                    phone=""
+                    phone="",
+                    gender=""
                 )
 
                 new_user = await create_new_user(new_user_data)

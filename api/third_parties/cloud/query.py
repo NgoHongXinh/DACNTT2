@@ -2,6 +2,9 @@ import cloudinary
 import cloudinary.uploader
 from settings.init_project import config_system
 
+DEFAULT_PICTURE_URL = "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062103/DEFAULT/tdt_bg.jpg"
+DEFAULT_BACKGROUND_PICTURE_URL = "https://res.cloudinary.com/darjwnxvd/image/upload/v1710062102/DEFAULT/cat_bg.png"
+
 cloudinary.config(
     cloud_name=config_system['CLOUD_NAME'],
     api_key=config_system['CLOUD_API_KEY'],
@@ -27,3 +30,11 @@ async def upload_video(file_data_stream, user_code):
 
 async def delete_image(public_id):
     return cloudinary.uploader.destroy(public_id=public_id)
+
+
+async def get_default_picture():
+    return DEFAULT_PICTURE_URL
+
+
+async def get_default_background_picture():
+    return DEFAULT_BACKGROUND_PICTURE_URL
