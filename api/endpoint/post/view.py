@@ -580,8 +580,8 @@ async def create_share_post(post_code: str, createSharePost: CreateSharePost,  u
             content=createSharePost.content,
             image_ids=[],
             images=[],
-            video_ids=[],
-            videos=[],
+            video_ids="",
+            videos="",
             root_post=post['post_code'],
             created_by=user['user_code'],
             user_root_post=post['created_by']
