@@ -26,6 +26,8 @@ class ResponseFriendOfUser(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     user_code: str = Field("", example='')
     fullname: str = Field("", example='')
+    family_name: str = Field("", example='')
+    given_name: str = Field("", example='')
     picture: str = Field("", example='')
     background_picture: str = Field("", example='')
     picture_id: str = Field("", example='')
