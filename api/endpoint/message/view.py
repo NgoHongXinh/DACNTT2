@@ -125,7 +125,7 @@ async def get_all_message( conversation_code: str, user: dict = Depends(get_curr
         all_memeber_info = await all_memeber_info_cursor.to_list(None)
         user_code__user_info = {}
         for user_info in all_memeber_info:
-            user_code__user_info[user_info['user_code']] = user
+            user_code__user_info[user_info['user_code']] = user_info
         for mess in list_mess:
             if mess['sender_code'] != user['user_code']:
                 if mess['sender_code'] in user_code__user_info:
