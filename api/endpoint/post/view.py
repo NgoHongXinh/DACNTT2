@@ -60,6 +60,14 @@ async def get_all_posts_of_user(user_code: str, user: dict = Depends(get_current
         list_post_cursor = await list_post_cursor.to_list(None)
 
         for post in list_post_cursor:
+
+            post['root_post_info'] = None
+            if "root_post" in post and post['root_post']:
+                post['root_post_info'] = await get_post_by_post_code(post['root_post'])
+                if post['root_post_info']['created_by']:
+                    user_root_post_info = await user_query.get_user_by_code(post['root_post_info']['created_by'])
+                    post['root_post_info']['created_by'] = user_root_post_info
+
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
             post['liked_by'] = list(post['liked_by'])
@@ -588,21 +596,22 @@ async def create_share_post(post_code: str, createSharePost: CreateSharePost,  u
         )
         new_share_post = await post_query.create_post(post_data)
         if new_share_post:
-            notification = Notification(
-                notification_code=str(uuid.uuid4()),
-                user_code=post['created_by'],
-                user_code_guest=user['user_code'],
-                content=f"đã chia sẻ bài viết của bạn",
-            )
-            new_noti = await create_noti(notification)
-            if not new_noti:
-                logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
+            if user['user_code'] != post['created_by']:
+                notification = Notification(
+                    notification_code=str(uuid.uuid4()),
+                    user_code=post['created_by'],
+                    user_code_guest=user['user_code'],
+                    content=f"đã chia sẻ bài viết của bạn",
+                )
+                new_noti = await create_noti(notification)
+                if not new_noti:
+                    logger.error(TYPE_MESSAGE_RESPONSE[CODE_ERROR_WHEN_UPDATE_CREATE_NOTI])
 
-            else:
-                get_other_user_if_online = await get_user_if_user_is_online(post['created_by'])
-                if get_other_user_if_online:
-                    await send_noti(f"{user['fullname']} đã chia sẻ bài viết của bạn",
-                                    get_other_user_if_online['socket_id'])
+                else:
+                    get_other_user_if_online = await get_user_if_user_is_online(post['created_by'])
+                    if get_other_user_if_online:
+                        await send_noti(f"{user['fullname']} đã chia sẻ bài viết của bạn",
+                                        get_other_user_if_online['socket_id'])
         response = {
             "data": {
                 "message": "Bài viết đã được chia sẻ trên trang cá nhân của bạn"
