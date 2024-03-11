@@ -103,7 +103,8 @@ async def get_list_user_in_list(list_user_code: list, last_user_id: str = ""):
         database_name="user",
         query_condition={"user_code": {"$in": list_user_code}},
         db=db,
-        sort=1)
+        sort=1,
+        limit=1000)
     return list_friend_request_cursor
 
 
