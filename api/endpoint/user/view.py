@@ -9,7 +9,7 @@ from api.endpoint.user.schema import ResponseUser, ResponseUserProfile
 
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_USER_CODE_NOT_FOUND, \
     CODE_ERROR_CANT_CHANGE_INFO, CODE_ERROR_WHEN_UPDATE_CREATE
-from api.library.function import check_friend_or_not_in_profile
+from api.library.function import check_friend_or_not_in_profile, get_password_hash
 from api.third_parties.cloud.query import upload_image_cloud
 from api.third_parties.database.query.user import get_user_by_code, regex_user_name_email, update_user, create_new_user
 
@@ -135,6 +135,7 @@ async def update_user_info(
         class_name: str = Form(""),
         picture: Optional[UploadFile] = Form(""),
         background_picture: Optional[UploadFile] = Form(""),
+        password: str = Form(""),
         user: dict = Depends(get_current_user)):
     if user_code != user['user_code']:
         return http_exception(status_code=HTTP_400_BAD_REQUEST,
@@ -161,6 +162,9 @@ async def update_user_info(
 
     if given_name and family_name:
         data_update['fullname'] = family_name + given_name
+    if password:
+        data_update['password'] = await get_password_hash(password)
+        print(data_update['password'])
     picture_id = ""
     picture_update = ""
     background_picture_id =  ""
