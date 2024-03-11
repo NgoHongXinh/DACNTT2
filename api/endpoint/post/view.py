@@ -130,9 +130,10 @@ async def get_all_posts(user: dict = Depends(get_current_user), last_post_ids: s
             post['root_post_info'] = None
             if "root_post" in post and post['root_post']:
                 post['root_post_info'] = await get_post_by_post_code(post['root_post'])
-                if post['root_post_info']['created_by']:
-                    user_root_post_info = await user_query.get_user_by_code(post['root_post_info']['created_by'])
-                    post['root_post_info']['created_by'] = user_root_post_info
+                if post['root_post_info']:
+                    if post['root_post_info']['created_by']:
+                        user_root_post_info = await user_query.get_user_by_code(post['root_post_info']['created_by'])
+                        post['root_post_info']['created_by'] = user_root_post_info
             user_info = await user_query.get_user_by_code(post['created_by'])
             post['created_by'] = user_info
             post['liked_by'] = list(post['liked_by'])

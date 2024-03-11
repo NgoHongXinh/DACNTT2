@@ -7,7 +7,7 @@ class User(BaseModel):
 
     def __init__(self, user_code="", fullname="", picture="", background_picture="", background_picture_id="",
                  picture_id="", given_name="", family_name="", username="", biography="", class_name="", faculty="",
-                 friends_code=[], birthday="", phone="", gender=""):
+                 friends_code=[], birthday="", phone="", gender="", password=""):
         super().__init__()
         self.user_code = user_code
         self.fullname = fullname
@@ -25,10 +25,11 @@ class User(BaseModel):
         self.birthday = birthday
         self.phone = phone
         self.gender = gender
+        self.password = password
 
     def to_json(self):
         data = self.__dict__
         for key, value in list(data.items()):
-            if value is "":
+            if value == "":
                 del data[key]
         return data
