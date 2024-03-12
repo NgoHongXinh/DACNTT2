@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ class ResponsePost(BaseModel):
     root_post: str = Field("", example='', description="bài gốc của bài được chia sẻ")
     videos: str = Field("", example='')
     video_ids: str = Field("", example='')
+    created_time: datetime.datetime
 
 class ResponseListSharePost(BaseModel):
     post_code: str = Field("", example='')
@@ -30,6 +32,7 @@ class ResponseListSharePost(BaseModel):
     root_post_info: Optional[ResponsePost] = Field(None)
     videos: str = Field("", example='')
     video_ids: str = Field("", example='')
+    created_time: datetime.datetime
 
 
 class ResponseCreateUpdatePost(BaseModel):
