@@ -23,7 +23,8 @@ async def get_all_conversation_of_current_user(user_code: str, last_conversation
         query_condition={"members": {"$in": [user_code]}},
         db=db,
         sort=-1,
-        is_conversation=True
+        is_conversation=True,
+        limit=1000
     )
     return list_conversation_cursor
 
