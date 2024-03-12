@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.base.authorization import get_current_user
 from api.base.schema import SuccessResponse, FailResponse, ResponseStatus
+from api.endpoint.comment.schema import ResponseComment
 from api.endpoint.message.schema import ResponseMessage, RequestCreateMessage, \
      ResponseListMessage
 from api.library.constant import CODE_SUCCESS, TYPE_MESSAGE_RESPONSE, CODE_ERROR_SERVER, CODE_ERROR_INPUT, \
@@ -19,6 +20,7 @@ from api.third_parties.database.query.conversation import get_conversation_by_co
 from api.third_parties.database.query.message import create_message, get_message_by_message_code, \
     get_all_message_by_conversation_code, get_message_id, create_message_group
 from api.third_parties.database.query.user import get_user_by_code, get_list_user_by_code
+
 from api.third_parties.database.query.user_online import get_user_if_user_is_online
 from api.third_parties.socket.socket import sio_server, send_mess_room
 from settings.init_project import open_api_standard_responses, http_exception
@@ -65,11 +67,11 @@ async def create_a_message(request_message_data: RequestCreateMessage,
 
         await update_stt_conversation(conversation_code, max_stt)
         new_message_info = await get_message_id(new_message)
+
         sender_info = await get_user_by_code(new_message_info['sender_code'])
 
         new_message_info['sender_info'] = sender_info
         response = {
-
             "data": new_message_info,
             "response_status": {
                 "code": CODE_SUCCESS,
