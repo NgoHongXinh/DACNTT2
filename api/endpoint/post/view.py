@@ -581,6 +581,7 @@ async def create_share_post(post_code: str, createSharePost: CreateSharePost,  u
         # nếu bài viết là bài đã được share lại của người khác thì nhâ share sẽ share bài gốc
         # B SHARE A, C SHARE BÀI MÀ B ĐÃ SHARE CỦA A => BÀI GỐC LÀ A
         post_exist = await get_post_of_user_by_code(user['user_code'], post_code)
+
         if post_exist:
             message = "Bạn đã share bài viết này"
             status_code = HTTP_400_BAD_REQUEST
@@ -593,7 +594,7 @@ async def create_share_post(post_code: str, createSharePost: CreateSharePost,  u
             images=[],
             video_ids="",
             videos="",
-            root_post=post['post_code'],
+            root_post=post['post_code'] if post['root_post'] ==""else post['root_post'],
             created_by=user['user_code'],
             user_root_post=post['created_by']
         )
