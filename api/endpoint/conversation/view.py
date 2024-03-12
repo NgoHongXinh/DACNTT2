@@ -28,7 +28,7 @@ logger = logging.getLogger("conversation.view.py")
 
 
 @router.get(
-    path="/conversation",
+    path="/conversation/{conversation_code}",
     name="get_conversation",
     description="get a conversation of current user",
     status_code=HTTP_200_OK,
@@ -38,7 +38,7 @@ logger = logging.getLogger("conversation.view.py")
         fail_response_model=FailResponse[ResponseStatus]
     )
 )
-async def get_conversation(conversation_code: str):
+async def get_conversation(conversation_code: str, user: dict = Depends(get_current_user)):
     status_code = code = message = ""
 
     try:
@@ -48,6 +48,13 @@ async def get_conversation(conversation_code: str):
             message = 'conversation_code not allow empty'
             raise HTTPException(status_code)
         cursor = await get_conversation_by_code(conversation_code)
+        members = cursor['members']
+        cursor['members_obj'] = []
+        for member in members:
+            if member != user['user_code']:
+                user_member = await get_user_by_code(member)
+                cursor['members_obj'].append(user_member)
+        cursor['members_obj'].append(user)
         response = {
             "data": cursor,
             "response_status": {
@@ -97,7 +104,6 @@ async def get_all_conversation(user: dict = Depends(get_current_user), last_conv
             conversation['members_obj'] =[]
             conversation['online'] = False
             for member in members:
-                print(member)
                 if member != user['user_code']:
                     user_member = await get_user_by_code(member)
                     get_other_user_if_online = await get_user_if_user_is_online(member)
