@@ -122,6 +122,7 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
             code = CODE_ERROR_INPUT
             raise HTTPException(status_code)
 
+        # kiểm tra xem đã có lời mời kết bạn giữa 2 người chưa
         friend_request = await get_friend_request_of_2_user(user['user_code'], user_code_want_request, False)
         if friend_request:
             status_code = HTTP_400_BAD_REQUEST
@@ -149,6 +150,7 @@ async def create_friend_request(user_code_want_request: str, user: dict = Depend
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_NOTI
                 raise HTTPException(status_code)
             else:
+                # gửi thông báo đến người nhận lời mời kết bạn
                 get_other_user_if_online = await get_user_if_user_is_online(user_code_want_request)
                 if get_other_user_if_online:
                     await send_noti(f'{user["fullname"]} đã gửi lời mời kết bạn', get_other_user_if_online['socket_id'])
@@ -231,6 +233,7 @@ async def accept_friend(
                 code = CODE_ERROR_WHEN_UPDATE_CREATE_USER
                 raise HTTPException(status_code)
         else:
+            # nếu cập nhật bạn bè cho user hiện tại thất bại thì rollback lại trạng thái trước khi cập nhật
             roll_back_friend_request = await update_friend_request(
                 user_code_in_queue_request,
                 user['user_code'],
@@ -322,7 +325,8 @@ async def get_all_friend_of_user(
             raise HTTPException(status_code)
         get_friend_of_user = await get_list_user_in_list(user_info['friends_code'], last_friend_id)
         get_friend_of_user = await get_friend_of_user.to_list(None)
-        # th vào trang bạn bè của người khác
+        #  thêm vào trang bạn bè của người khác
+        #  thêm trạng thái bạn bè của user hiện tại với user_code đang cần tìm
         # kiểm tra xem danh sách bạn bè của người đó có ai là bạn với mình hay đã gửi lời mời ...
         if user_code != user['user_code']:
             for index, friend in enumerate(get_friend_of_user):
@@ -386,11 +390,12 @@ async def delete_friend(
             code = CODE_ERROR_USER_CODE_NOT_FOUND
             status_code = HTTP_400_BAD_REQUEST
             raise HTTPException(status_code)
+        # kiểm tra xem 2 người có phải là bạn bè hay không
         if user_code in user['friends_code'] and user['user_code'] in user_info['friends_code']:
             await remove_user_friend(user['user_code'], user_code)
             await remove_user_friend(user_code, user['user_code'])
+            # xóa lời mời kết bạn giữa 2 người
             friend_request_info = await get_friend_request_of_2_user(user_code, user['user_code'])
-
             await delete_friend_request(friend_request_info['friend_request_code'])
 
         return SuccessResponse[ResponseCreateFriendRequest](**{
