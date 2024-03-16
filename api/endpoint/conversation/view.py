@@ -50,6 +50,7 @@ async def get_conversation(conversation_code: str, user: dict = Depends(get_curr
         cursor = await get_conversation_by_code(conversation_code)
         members = cursor['members']
         cursor['members_obj'] = []
+
         for member in members:
             if member != user['user_code']:
                 user_member = await get_user_by_code(member)
@@ -376,7 +377,7 @@ async def update_info_group(info_group: RequestCreateGroup,
 
                 # Kiểm tra xem các user có trong group không
                 if user_code in existing_members:
-                    duplicate_members.append(user_code)
+                    duplicate_members.append(user['fullname'])
 
                 else:
                     # Thêm user_code vào danh sách thành viên
@@ -385,7 +386,7 @@ async def update_info_group(info_group: RequestCreateGroup,
             if duplicate_members:
                 status_code = HTTP_400_BAD_REQUEST
                 code = CODE_ERROR_INPUT
-                message = f"User code = {', '.join(duplicate_members)} already exists in the group"
+                message = f"User name : {', '.join(duplicate_members)} already exists in the group"
                 raise HTTPException(status_code)
 
             new_name_group = info_group.name if info_group.name else existing_name
@@ -463,7 +464,7 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestDelet
         empty_members = []
         members_to_remove = []
 
-        # Kiểm tra xem các user có tồn tại không
+        # Kiểm tra xem  user có tồn tại không
         for user_code in del_user.list_user_to_chat:
             user = await get_user_by_code(user_code)
             if not user:
@@ -471,7 +472,7 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestDelet
                 code = CODE_ERROR_USER_CODE_NOT_FOUND
                 raise HTTPException(status_code)
 
-            # Kiểm tra xem các user có trong group không
+            # Kiểm tra xem  user có trong group không
             if user_code in existing_members:
                 members_to_remove.append(user_code)
             else:
@@ -483,7 +484,7 @@ async def remove_users_from_group(conversation_code: str, del_user: RequestDelet
             message = f"User code = {', '.join(empty_members)} not exists in the group"
             raise HTTPException(status_code)
 
-        #  Xóa các thành viên chỉ định khỏi danh sách members
+        #  Xóa user khỏi danh sách members
         group['members'] = [member for member in existing_members if member not in members_to_remove]
 
         # Kiểm tra số lượng thành viên còn lại trong nhóm
