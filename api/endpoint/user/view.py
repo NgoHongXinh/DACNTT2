@@ -37,6 +37,7 @@ async def find_friend(name_or_email: str = Query(default=""), user: dict = Depen
         list_data = await regex_user_name_email(name_or_email)
         for data in list_data:
             if data['user_code'] == user['user_code']:
+                # nếu là người dùng hiện tại thì không kiểm tra bạn bè
                 data['is_current_login_user'] = True
             else:
                 data['is_current_login_user'] = False
