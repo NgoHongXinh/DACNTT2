@@ -161,7 +161,7 @@ async def update_user_info(
         data_update['class_name'] = class_name
 
     if given_name and family_name:
-        data_update['fullname'] = family_name + given_name
+        data_update['fullname'] = family_name + ' ' + given_name
     if password:
         data_update['password'] = await get_password_hash(password)
         print(data_update['password'])
