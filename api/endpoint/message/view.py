@@ -132,6 +132,8 @@ async def get_all_message( conversation_code: str, user: dict = Depends(get_curr
             if mess['sender_code'] != user['user_code']:
                 if mess['sender_code'] in user_code__user_info:
                     mess['sender_info'] = user_code__user_info[mess['sender_code']]
+                elif conversation['type'] == '1':
+                    mess['sender_info'] = await get_user_by_code(mess['sender_code'])
             else:
                 mess['sender_info'] = user
         last_conversation_id = ObjectId("                        ")
